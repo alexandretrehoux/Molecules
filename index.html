@@ -1,0 +1,2350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141926">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Molécules">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="description" content="Jeu d'entraînement aux schémas de Lewis et à la nomenclature des molécules organiques.">
+<title>Molécules</title>
+<style>
+:root {
+  --nuit:      #141926;
+  --nuit-2:    #1A2032;
+  --nuit-3:    #1C2233;
+  --bord:      #2A324A;
+  --ivoire:    #EDE6D8;
+  --ivoire-2:  #8E96AB;
+  --ambre:     #E8A93B;
+  --corail:    #D2593F;
+  --vert:      #4FA894;
+  --cobalt:    #5B7FD4;
+  --rayon:     14px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--nuit);
+  color: var(--ivoire);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px; line-height: 1.5;
+  overscroll-behavior: none;
+}
+
+body { touch-action: manipulation; }
+
+#app {
+  height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+
+.ecran { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.ecran.actif { display: flex; }
+
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.015em; }
+p { margin: 0 0 0.8em; }
+.discret { color: var(--ivoire-2); font-size: 0.88rem; }
+
+/* ------------------------------------------------------------ écran titre */
+
+#ecran-titre {
+  justify-content: center; align-items: center; text-align: center;
+  padding: 24px; cursor: pointer; position: relative; overflow: hidden;
+}
+
+.titre-jeu {
+  font-size: clamp(3rem, 17vw, 5rem);
+  font-weight: 800; letter-spacing: -0.045em; line-height: 0.95;
+  position: relative; color: var(--ivoire); margin-bottom: 6px;
+}
+/* décalage de repérage, comme une impression mal calée */
+.titre-jeu .fantome { position: absolute; left: 0; right: 0; top: 0; }
+.titre-jeu .f1 { color: var(--corail); transform: translate(-5px, 4px); }
+.titre-jeu .f2 { color: var(--cobalt); transform: translate(5px, -4px); }
+.titre-jeu .reel { position: relative; }
+
+.sous-titre { color: var(--ivoire-2); max-width: 22ch; margin: 0 auto 30px; }
+.signature { color: var(--ivoire-2); font-size: 0.86rem; letter-spacing: 0.08em;
+             margin: 26px 0 0; opacity: 0.75; }
+
+#anim-titre { width: min(70vw, 260px); height: min(70vw, 260px); margin-bottom: 18px; }
+#anim-titre .orbe { animation: derive 9s ease-in-out infinite; transform-origin: center; }
+#anim-titre .orbe:nth-child(2) { animation-delay: -3s; }
+#anim-titre .orbe:nth-child(3) { animation-delay: -6s; }
+@keyframes derive {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(0, -7px); }
+}
+
+.appel { color: var(--ambre); font-weight: 600; animation: battement 2.2s ease-in-out infinite; }
+@keyframes battement { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #anim-titre .orbe, .appel { animation: none; }
+}
+
+/* ------------------------------------------------------------- structures */
+
+.barre {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; border-bottom: 1px solid var(--bord);
+  flex: 0 0 auto;
+}
+.barre .titre-barre { font-weight: 600; flex: 1; font-size: 0.98rem; }
+.contenu { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 18px 24px;
+           -webkit-overflow-scrolling: touch; }
+.pied { flex: 0 0 auto; padding: 12px 18px 18px; border-top: 1px solid var(--bord);
+        display: flex; gap: 10px; }
+
+/* --------------------------------------------------------------- boutons */
+
+button {
+  font: inherit; color: inherit; cursor: pointer;
+  border-radius: var(--rayon);
+  border: 2px solid var(--bord);
+  background: var(--nuit-2);
+  padding: 13px 16px;
+  min-height: 50px;
+  transition: transform .06s ease, box-shadow .06s ease;
+}
+button:active { transform: translate(2px, 2px); }
+button:focus-visible { outline: 3px solid var(--ambre); outline-offset: 2px; }
+
+.principal {
+  background: var(--ambre); color: #241A06; border-color: #B9821F;
+  font-weight: 700; box-shadow: 0 4px 0 #8C6216;
+  flex: 1;
+}
+.principal:active { box-shadow: 0 1px 0 #8C6216; }
+.secondaire { background: transparent; }
+.pied button { flex: 1; }
+.pied .etroit { flex: 0 0 auto; padding-inline: 18px; }
+
+button[disabled] { opacity: .45; pointer-events: none; }
+
+.icone {
+  border: none; background: none; padding: 8px; min-height: 40px;
+  color: var(--ivoire-2); font-size: 1.3rem; line-height: 1;
+}
+
+/* ------------------------------------------------------------ menu, choix */
+
+.carte-jeu {
+  display: block; width: 100%; text-align: left; margin-bottom: 14px;
+  padding: 20px; background: var(--nuit-2); border: 2px solid var(--bord);
+  box-shadow: 0 5px 0 #0D111C;
+}
+.carte-jeu h2 { font-size: 1.3rem; margin-bottom: 4px; }
+.carte-jeu .discret { display: block; }
+.carte-jeu .vignette { float: right; margin-left: 14px; }
+
+fieldset { border: none; margin: 0 0 26px; padding: 0; }
+legend { font-weight: 650; margin-bottom: 10px; padding: 0; }
+.options { display: flex; flex-direction: column; gap: 9px; }
+.option {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 15px; border: 2px solid var(--bord); border-radius: var(--rayon);
+  background: var(--nuit-2); cursor: pointer;
+}
+.option input { margin: 3px 0 0; accent-color: var(--ambre); width: 20px; height: 20px; flex: 0 0 auto; }
+.option.choisie { border-color: var(--ambre); background: #221D14; }
+.option b { font-weight: 600; }
+
+/* -------------------------------------------------------------- jeu Lewis */
+
+.entete-question {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.formule {
+  font-size: 2.1rem; font-weight: 650; letter-spacing: 0.01em;
+}
+.formule sub { font-size: 0.58em; vertical-align: -0.18em; }
+.formule sup { font-size: 0.58em; vertical-align: 0.42em; }
+
+.compteur {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.9rem; color: var(--ivoire-2); margin-bottom: 10px;
+}
+.jauge { flex: 1; height: 6px; background: var(--bord); border-radius: 3px; overflow: hidden; }
+.jauge i { display: block; height: 100%; background: var(--ambre); transition: width .18s ease; }
+.jauge.trop i { background: var(--corail); }
+
+.nom-cible { font-size: 1.55rem; margin-bottom: 2px; }
+#lewis-sous { margin-bottom: 12px; }
+#lewis-sous sub { font-size: 0.66em; vertical-align: -0.2em; }
+#lewis-sous sup { font-size: 0.66em; vertical-align: 0.4em; }
+
+.toile {
+  touch-action: none;
+  background: var(--nuit-2);
+  background-image: radial-gradient(var(--bord) 1px, transparent 1px);
+  background-size: 18px 18px;
+  border: 2px solid var(--bord); border-radius: var(--rayon);
+  padding: 10px; margin-bottom: 14px;
+  min-height: 52vh; display: flex;
+}
+.toile .schema { width: 100%; height: 100%; min-height: 50vh;
+                 font-family: inherit; display: block; }
+.cible-liaison, .cible-atome { cursor: pointer; }
+
+.mode-emploi { font-size: 0.84rem; color: var(--ivoire-2); margin: 0 0 8px; line-height: 1.4; }
+
+/* ------------------------------------------------------------- retour élève */
+
+.bilan-reponse {
+  border-radius: var(--rayon); padding: 15px 16px; margin-bottom: 14px;
+  border: 2px solid var(--bord); background: var(--nuit-2);
+}
+.bilan-reponse.juste { border-color: var(--vert); background: #14251F; }
+.bilan-reponse.faux  { border-color: var(--corail); background: #26191A; }
+.bilan-reponse h3 { font-size: 1.02rem; margin-bottom: 6px; }
+.bilan-reponse ul { margin: 6px 0 0; padding-left: 20px; }
+.bilan-reponse li { margin-bottom: 5px; }
+.bilan-reponse .nom-entite { color: var(--ambre); font-weight: 600; }
+
+/* -------------------------------------------------------- jeu nomenclature */
+
+.formule-dev {
+  font-size: clamp(0.78rem, 4.15vw, 1.4rem); font-weight: 600;
+  text-align: center; padding: 26px 8px; margin-bottom: 18px;
+  background: var(--nuit-2); border: 2px solid var(--bord);
+  border-radius: var(--rayon); word-break: break-word; line-height: 1.7;
+}
+.formule-dev sub { font-size: 0.62em; vertical-align: -0.2em; }
+.formule-dev { letter-spacing: -0.005em; }
+.formule-dev .lien { color: var(--ivoire-2); }
+
+input[type="text"] {
+  font: inherit; width: 100%; padding: 14px 15px;
+  background: var(--nuit-2); color: var(--ivoire);
+  border: 2px solid var(--bord); border-radius: var(--rayon);
+}
+input[type="text"]:focus { outline: none; border-color: var(--ambre); }
+input[type="text"]::placeholder { color: #5F6880; }
+
+/* -------------------------------------------------------------- fin de série */
+
+.score-final { font-size: 3.4rem; font-weight: 800; letter-spacing: -0.03em; }
+.score-final span { color: var(--ivoire-2); font-size: 1.4rem; font-weight: 600; }
+.recap { margin-top: 18px; }
+.recap li { margin-bottom: 6px; }
+.recap ul { padding-left: 20px; margin: 6px 0 0; }
+
+/* écrans courts : on rend la moitié basse de la page utilisable */
+@media (max-height: 660px) {
+  .toile { min-height: 38vh; }
+  .toile .schema { min-height: 36vh; }
+  .formule { font-size: 1.8rem; }
+}
+
+/* ------------------------------------------------- panneau de construction */
+
+.panneau { margin-bottom: 14px; }
+.panneau-titre { font-weight: 650; margin-bottom: 8px; }
+.panneau-titre .discret { font-weight: 400; }
+
+.rangee, .rangee-mini, .segments { display: flex; align-items: center; gap: 8px; }
+.rangee { justify-content: space-between; margin-bottom: 6px; }
+.segments { flex-wrap: wrap; }
+.pas { display: flex; align-items: center; gap: 12px; }
+.pas b { min-width: 1.2ch; text-align: center; font-size: 1.1rem; }
+
+button.mini {
+  min-height: 44px; padding: 9px 14px; font-size: 0.94rem;
+  border-radius: 11px; background: var(--nuit-2); border: 2px solid var(--bord);
+}
+button.mini.actif { background: var(--ambre); color: #241A06; border-color: #B9821F; font-weight: 650; }
+button.mini.danger { color: var(--corail); border-color: #4A2A28; }
+.rangee-mini button.mini { flex: 1; }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ------------------------------------------------------- écran titre -->
+  <section class="ecran actif" id="ecran-titre">
+    <svg id="anim-titre" viewBox="0 0 200 200" aria-hidden="true">
+      <g stroke="#EDE6D8" stroke-width="4" stroke-linecap="round">
+        <line x1="100" y1="100" x2="100" y2="46"/>
+        <line x1="100" y1="100" x2="53" y2="127"/>
+        <line x1="100" y1="100" x2="147" y2="127"/>
+        <line x1="100" y1="100" x2="100" y2="158"/>
+      </g>
+      <circle cx="100" cy="100" r="26" fill="#1C2233" stroke="#7E8AA2" stroke-width="3"/>
+      <text x="100" y="101" text-anchor="middle" dominant-baseline="central"
+            font-size="28" font-weight="600" fill="#7E8AA2"
+            font-family="system-ui, sans-serif">C</text>
+      <g class="orbe">
+        <circle cx="100" cy="46" r="19" fill="#1C2233" stroke="#E8A93B" stroke-width="3"/>
+        <text x="100" y="47" text-anchor="middle" dominant-baseline="central" font-size="21"
+              font-weight="600" fill="#E8A93B" font-family="system-ui, sans-serif">H</text>
+      </g>
+      <g class="orbe">
+        <circle cx="53" cy="127" r="19" fill="#1C2233" stroke="#D2593F" stroke-width="3"/>
+        <text x="53" y="128" text-anchor="middle" dominant-baseline="central" font-size="21"
+              font-weight="600" fill="#D2593F" font-family="system-ui, sans-serif">H</text>
+      </g>
+      <g class="orbe">
+        <circle cx="147" cy="127" r="19" fill="#1C2233" stroke="#5B7FD4" stroke-width="3"/>
+        <text x="147" y="128" text-anchor="middle" dominant-baseline="central" font-size="21"
+              font-weight="600" fill="#5B7FD4" font-family="system-ui, sans-serif">H</text>
+      </g>
+      <circle cx="100" cy="158" r="19" fill="#1C2233" stroke="#4FA894" stroke-width="3"/>
+      <text x="100" y="159" text-anchor="middle" dominant-baseline="central" font-size="21"
+            font-weight="600" fill="#4FA894" font-family="system-ui, sans-serif">H</text>
+    </svg>
+    <h1 class="titre-jeu"><span class="fantome f1" aria-hidden="true">Molécules</span><span class="fantome f2" aria-hidden="true">Molécules</span><span class="reel">Molécules</span></h1>
+    <p class="sous-titre">Schémas de Lewis et nomenclature, en séries courtes.</p>
+    <p class="appel">Toucher pour commencer</p>
+    <p class="signature">A.&nbsp;Trehoux</p>
+  </section>
+
+  <!-- -------------------------------------------------------- écran menu -->
+  <section class="ecran" id="ecran-menu">
+    <div class="barre"><span class="titre-barre">Choisir un jeu</span></div>
+    <div class="contenu">
+      <button class="carte-jeu" id="choix-lewis">
+        <svg class="vignette" width="52" height="52" viewBox="0 0 60 60" aria-hidden="true">
+          <line x1="30" y1="30" x2="30" y2="9" stroke="#EDE6D8" stroke-width="3"/>
+          <line x1="26" y1="33" x2="10" y2="45" stroke="#EDE6D8" stroke-width="3"/>
+          <line x1="34" y1="33" x2="50" y2="45" stroke="#EDE6D8" stroke-width="3"/>
+          <circle cx="30" cy="30" r="11" fill="#1C2233" stroke="#7E8AA2" stroke-width="2.5"/>
+          <circle cx="30" cy="9" r="7" fill="#1C2233" stroke="#D2593F" stroke-width="2.5"/>
+          <circle cx="10" cy="45" r="7" fill="#1C2233" stroke="#E8A93B" stroke-width="2.5"/>
+          <circle cx="50" cy="45" r="7" fill="#1C2233" stroke="#5B7FD4" stroke-width="2.5"/>
+        </svg>
+        <h2>Schéma de Lewis</h2>
+        <span class="discret">Relier soi-même des atomes séparés, choisir l’ordre de chaque
+        liaison et placer les doublets non liants.</span>
+      </button>
+
+      <button class="carte-jeu" id="choix-nom">
+        <svg class="vignette" width="52" height="52" viewBox="0 0 60 60" aria-hidden="true">
+          <text x="30" y="24" text-anchor="middle" font-size="17" font-weight="700"
+                fill="#4FA894" font-family="system-ui, sans-serif">OH</text>
+          <line x1="12" y1="40" x2="48" y2="40" stroke="#EDE6D8" stroke-width="3"/>
+          <line x1="30" y1="40" x2="30" y2="30" stroke="#EDE6D8" stroke-width="3"/>
+          <circle cx="12" cy="40" r="5" fill="#E8A93B"/>
+          <circle cx="30" cy="40" r="5" fill="#E8A93B"/>
+          <circle cx="48" cy="40" r="5" fill="#E8A93B"/>
+        </svg>
+        <h2>Nomenclature</h2>
+        <span class="discret">Nommer une molécule à partir de sa formule
+        semi-développée&nbsp;: alcanes, alcools, aldéhydes, cétones, acides carboxyliques.</span>
+      </button>
+
+      <p class="discret" style="margin-top:22px">Contenus calés sur les programmes de
+      physique-chimie de seconde et de spécialité de première
+      (BO spécial n°&nbsp;1 du 22&nbsp;janvier 2019).</p>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------- écran réglages -->
+  <section class="ecran" id="ecran-reglages">
+    <div class="barre">
+      <button class="icone" data-retour="ecran-menu" aria-label="Revenir au menu">‹</button>
+      <span class="titre-barre">Schéma de Lewis</span>
+    </div>
+    <div class="contenu">
+      <fieldset>
+        <legend>Niveau</legend>
+        <div class="options">
+          <label class="option"><input type="radio" name="niveau" value="1" checked>
+            <span><b>Un atome central</b><br><span class="discret">Entités simples&nbsp;:
+            H₂O, NH₃, CH₄, CO₂, HCN, BF₃…</span></span></label>
+          <label class="option"><input type="radio" name="niveau" value="2">
+            <span><b>Chaîne carbonée courte</b><br><span class="discret">Deux ou trois
+            atomes de carbone, premiers groupes caractéristiques.</span></span></label>
+          <label class="option"><input type="radio" name="niveau" value="3">
+            <span><b>Chaînes longues, ramifiées ou cycliques</b><br><span class="discret">Avec
+            groupe caractéristique et ramifications.</span></span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Entités proposées</legend>
+        <div class="options">
+          <label class="option"><input type="radio" name="mode" value="molecules" checked>
+            <span><b>Molécules seules</b></span></label>
+          <label class="option"><input type="radio" name="mode" value="ions">
+            <span><b>Molécules et ions</b><br><span class="discret">Ajoute les ions
+            polyatomiques et le calcul des charges formelles.</span></span></label>
+        </div>
+      </fieldset>
+    </div>
+    <div class="pied">
+      <button class="principal" id="lancer-lewis">Commencer la série</button>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------- écran jeu Lewis -->
+  <section class="ecran" id="ecran-lewis">
+    <div class="barre">
+      <button class="icone" data-retour="ecran-reglages" aria-label="Quitter la série">‹</button>
+      <span class="titre-barre" id="lewis-progression"></span>
+      <span class="discret" id="lewis-score"></span>
+    </div>
+    <div class="contenu">
+      <h2 class="nom-cible" id="lewis-nom"></h2>
+      <p class="discret" id="lewis-sous"></p>
+      <div class="compteur">
+        <span id="lewis-compteur-texte"></span>
+        <span class="jauge" id="lewis-jauge"><i></i></span>
+      </div>
+      <div class="toile" id="lewis-toile"></div>
+      <div class="panneau" id="lewis-panneau"></div>
+      <div id="lewis-retour"></div>
+    </div>
+    <div class="pied" id="lewis-actions"></div>
+  </section>
+
+  <!-- ------------------------------------------ réglages de nomenclature -->
+  <section class="ecran" id="ecran-reglages-nom">
+    <div class="barre">
+      <button class="icone" data-retour="ecran-menu" aria-label="Revenir au menu">‹</button>
+      <span class="titre-barre">Nomenclature</span>
+    </div>
+    <div class="contenu">
+      <fieldset>
+        <legend>Niveau</legend>
+        <div class="options">
+          <label class="option"><input type="radio" name="niveauNom" value="P" checked>
+            <span><b>Première</b><br><span class="discret">Alcanes, alcools, aldéhydes,
+            cétones et acides carboxyliques ; chaînes linéaires ou ramifiées.</span></span></label>
+          <label class="option"><input type="radio" name="niveauNom" value="T">
+            <span><b>Terminale</b><br><span class="discret">Esters, amines, amides et
+            halogénoalcanes, y compris les dérivés substitués sur l’azote&nbsp;; chaque série
+            reprend aussi quatre molécules du programme de première.</span></span></label>
+        </div>
+      </fieldset>
+      <p class="discret">Les chaînes carbonées proposées ne dépassent pas sept atomes de carbone.</p>
+    </div>
+    <div class="pied">
+      <button class="principal" id="lancer-nom">Commencer la série</button>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------- écran jeu nomenclature -->
+  <section class="ecran" id="ecran-nom">
+    <div class="barre">
+      <button class="icone" data-retour="ecran-reglages-nom" aria-label="Quitter la série">‹</button>
+      <span class="titre-barre" id="nom-progression"></span>
+      <span class="discret" id="nom-score"></span>
+    </div>
+    <div class="contenu">
+      <p class="mode-emploi">Quel est le nom de cette molécule&nbsp;?</p>
+      <div class="formule-dev" id="nom-formule"></div>
+      <label for="nom-saisie" class="discret">Nom de la molécule</label>
+      <input type="text" id="nom-saisie" placeholder="par exemple : propan-1-ol"
+             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div id="nom-retour" style="margin-top:14px"></div>
+    </div>
+    <div class="pied" id="nom-actions"></div>
+  </section>
+
+  <!-- ------------------------------------------------------ écran bilan -->
+  <section class="ecran" id="ecran-bilan">
+    <div class="barre"><span class="titre-barre" id="bilan-titre"></span></div>
+    <div class="contenu">
+      <p class="score-final" id="bilan-score"></p>
+      <p id="bilan-message"></p>
+      <div id="bilan-recap"></div>
+    </div>
+    <div class="pied">
+      <button class="secondaire etroit" data-retour="ecran-menu">Menu</button>
+      <button class="principal" id="bilan-rejouer">Nouvelle série</button>
+    </div>
+  </section>
+
+</div>
+<script>
+/* =========================================================================
+   Molécules — données chimiques
+   Programmes : BO spécial n°1 du 22/01/2019 (seconde ; spécialité première).
+   Liste exigible en première : O2, H2, N2, H2O, CO2, NH3, CH4, HCl, H+,
+   H3O+, Na+, NH4+, Cl-, OH-, O2-.
+
+   Écriture compacte d'une entité :
+     lourds    : atomes autres que H, dans l'ordre de référence
+     h         : nombre d'hydrogènes portés par chaque atome lourd
+     squelette : liaisons entre atomes lourds, [i, j] ou [i, j, ordre attendu]
+     cfAttendu : charges formelles non nulles, indexées sur « lourds »
+     mesomeres : nombre de formes mésomères équivalentes attendues
+   ========================================================================= */
+
+var ELEMENTS = {
+  H:  { Z: 1,  nom: 'hydrogène', valence: 1, octet: 2, lacune: 0, en: 2.20, couleur: '#E8E2D6' },
+  B:  { Z: 5,  nom: 'bore',      valence: 3, octet: 8, lacune: 2, en: 2.04, couleur: '#D98C7A' },
+  C:  { Z: 6,  nom: 'carbone',   valence: 4, octet: 8, lacune: 0, en: 2.55, couleur: '#7E8AA2' },
+  N:  { Z: 7,  nom: 'azote',     valence: 5, octet: 8, lacune: 0, en: 3.04, couleur: '#5B7FD4' },
+  O:  { Z: 8,  nom: 'oxygène',   valence: 6, octet: 8, lacune: 0, en: 3.44, couleur: '#D2593F' },
+  F:  { Z: 9,  nom: 'fluor',     valence: 7, octet: 8, lacune: 0, en: 3.98, couleur: '#7FBF8F' },
+  P:  { Z: 15, nom: 'phosphore', valence: 5, octet: 8, lacune: 0, en: 2.19, couleur: '#E0A93B' },
+  S:  { Z: 16, nom: 'soufre',    valence: 6, octet: 8, lacune: 0, en: 2.58, couleur: '#E0C13B' },
+  Cl: { Z: 17, nom: 'chlore',    valence: 7, octet: 8, lacune: 0, en: 3.16, couleur: '#4FA894' }
+};
+
+var DEFINITIONS = [
+
+  /* ================= Niveau 1 — un atome central, ou diatomique ========== */
+
+  { id:'H2', f:'H2', nom:'dihydrogène', niveau:1, lin:true, exigible:true,
+    lourds:['H','H'], h:[0,0], squelette:[[0,1]], mesomeres:1 },
+  { id:'Cl2', f:'Cl2', nom:'dichlore', niveau:1, lin:true,
+    lourds:['Cl','Cl'], h:[0,0], squelette:[[0,1]], mesomeres:1 },
+  { id:'F2', f:'F2', nom:'difluor', niveau:1, lin:true,
+    lourds:['F','F'], h:[0,0], squelette:[[0,1]], mesomeres:1 },
+  { id:'O2', f:'O2', nom:'dioxygène', niveau:1, lin:true, exigible:true,
+    lourds:['O','O'], h:[0,0], squelette:[[0,1,2]], mesomeres:1 },
+  { id:'N2', f:'N2', nom:'diazote', niveau:1, lin:true, exigible:true,
+    lourds:['N','N'], h:[0,0], squelette:[[0,1,3]], mesomeres:1 },
+  { id:'HCl', f:'HCl', nom:"chlorure d'hydrogène", niveau:1, lin:true, exigible:true,
+    lourds:['Cl'], h:[1], squelette:[], mesomeres:1 },
+  { id:'H2O', f:'H2O', nom:'eau', niveau:1, exigible:true,
+    lourds:['O'], h:[2], squelette:[], mesomeres:1 },
+  { id:'H2S', f:'H2S', nom:'sulfure de dihydrogène', niveau:1,
+    lourds:['S'], h:[2], squelette:[], mesomeres:1 },
+  { id:'NH3', f:'NH3', nom:'ammoniac', niveau:1, exigible:true,
+    lourds:['N'], h:[3], squelette:[], mesomeres:1 },
+  { id:'PH3', f:'PH3', nom:'phosphine', niveau:1,
+    lourds:['P'], h:[3], squelette:[], mesomeres:1 },
+  { id:'CH4', f:'CH4', nom:'méthane', niveau:1, exigible:true,
+    lourds:['C'], h:[4], squelette:[], mesomeres:1 },
+  { id:'CH3Cl', f:'CH3Cl', nom:'chlorométhane', niveau:1,
+    lourds:['C','Cl'], h:[3,0], squelette:[[0,1]], mesomeres:1 },
+  { id:'CH2Cl2', f:'CH2Cl2', nom:'dichlorométhane', niveau:1,
+    lourds:['C','Cl','Cl'], h:[2,0,0], squelette:[[0,1],[0,2]], mesomeres:1 },
+  { id:'CHCl3', f:'CHCl3', nom:'trichlorométhane', niveau:1,
+    lourds:['C','Cl','Cl','Cl'], h:[1,0,0,0], squelette:[[0,1],[0,2],[0,3]], mesomeres:1 },
+  { id:'CCl4', f:'CCl4', nom:'tétrachlorométhane', niveau:1,
+    lourds:['C','Cl','Cl','Cl','Cl'], h:[0,0,0,0,0],
+    squelette:[[0,1],[0,2],[0,3],[0,4]], mesomeres:1 },
+  { id:'CO2', f:'CO2', nom:'dioxyde de carbone', niveau:1, lin:true, exigible:true,
+    lourds:['C','O','O'], h:[0,0,0], squelette:[[0,1,2],[0,2,2]], mesomeres:1 },
+  { id:'CS2', f:'CS2', nom:'disulfure de carbone', niveau:1, lin:true,
+    lourds:['C','S','S'], h:[0,0,0], squelette:[[0,1,2],[0,2,2]], mesomeres:1 },
+  { id:'CH2O', f:'CH2O', nom:'méthanal', niveau:1,
+    lourds:['C','O'], h:[2,0], squelette:[[0,1,2]], mesomeres:1 },
+  { id:'HCN', f:'HCN', nom:"cyanure d'hydrogène", niveau:1, lin:true,
+    lourds:['C','N'], h:[1,0], squelette:[[0,1,3]], mesomeres:1 },
+  { id:'BF3', f:'BF3', nom:'trifluorure de bore', niveau:1,
+    lourds:['B','F','F','F'], h:[0,0,0,0], squelette:[[0,1],[0,2],[0,3]], mesomeres:1,
+    note:"Le bore ne complète pas son octet : il présente une lacune électronique." },
+
+  { id:'H3O+', f:'H3O', nom:'ion oxonium', niveau:1, charge:1, exigible:true,
+    lourds:['O'], h:[3], squelette:[], mesomeres:1, cfAttendu:{0:1} },
+  { id:'NH4+', f:'NH4', nom:'ion ammonium', niveau:1, charge:1, exigible:true,
+    lourds:['N'], h:[4], squelette:[], mesomeres:1, cfAttendu:{0:1} },
+  { id:'OH-', f:'OH', nom:'ion hydroxyde', niveau:1, charge:-1, lin:true, exigible:true,
+    lourds:['O'], h:[1], squelette:[], mesomeres:1, cfAttendu:{0:-1} },
+  { id:'CN-', f:'CN', nom:'ion cyanure', niveau:1, charge:-1, lin:true,
+    lourds:['C','N'], h:[0,0], squelette:[[0,1,3]], mesomeres:1, cfAttendu:{0:-1} },
+  { id:'ClO-', f:'ClO', nom:'ion hypochlorite', niveau:1, charge:-1, lin:true,
+    lourds:['Cl','O'], h:[0,0], squelette:[[0,1]], mesomeres:1, cfAttendu:{1:-1} },
+
+  /* ============ Niveau 2 — deux ou trois atomes de carbone ============== */
+
+  { id:'C2H6', f:'C2H6', nom:'éthane', niveau:2,
+    lourds:['C','C'], h:[3,3], squelette:[[0,1]], mesomeres:1 },
+  { id:'C2H4', f:'C2H4', nom:'éthène', niveau:2,
+    lourds:['C','C'], h:[2,2], squelette:[[0,1,2]], mesomeres:1 },
+  { id:'C2H2', f:'C2H2', nom:'éthyne', niveau:2, lin:true,
+    lourds:['C','C'], h:[1,1], squelette:[[0,1,3]], mesomeres:1 },
+  { id:'CH4O', f:'CH4O', nom:'méthanol', niveau:2,
+    lourds:['C','O'], h:[3,1], squelette:[[0,1]], mesomeres:1 },
+  { id:'H2O2', f:'H2O2', nom:"peroxyde d'hydrogène", niveau:2,
+    lourds:['O','O'], h:[1,1], squelette:[[0,1]], mesomeres:1 },
+  { id:'N2H4', f:'N2H4', nom:'hydrazine', niveau:2,
+    lourds:['N','N'], h:[2,2], squelette:[[0,1]], mesomeres:1 },
+  { id:'CH5N', f:'CH5N', nom:'méthanamine', niveau:2,
+    lourds:['C','N'], h:[3,2], squelette:[[0,1]], mesomeres:1 },
+  { id:'C2H6O', f:'C2H6O', nom:'éthanol', niveau:2,
+    lourds:['C','C','O'], h:[3,2,1], squelette:[[0,1],[1,2]], mesomeres:1 },
+  { id:'C2H6O_eth', f:'C2H6O', nom:'méthoxyméthane', niveau:2,
+    lourds:['C','O','C'], h:[3,0,3], squelette:[[0,1],[1,2]], mesomeres:1,
+    note:"Isomère de l'éthanol : même formule brute, enchaînement différent." },
+  { id:'C2H4O', f:'C2H4O', nom:'éthanal', niveau:2,
+    lourds:['C','C','O'], h:[3,1,0], squelette:[[0,1],[1,2,2]], mesomeres:1 },
+  { id:'C2H5Cl', f:'C2H5Cl', nom:'chloroéthane', niveau:2,
+    lourds:['C','C','Cl'], h:[3,2,0], squelette:[[0,1],[1,2]], mesomeres:1 },
+  { id:'C3H8', f:'C3H8', nom:'propane', niveau:2,
+    lourds:['C','C','C'], h:[3,2,3], squelette:[[0,1],[1,2]], mesomeres:1 },
+  { id:'C3H6', f:'C3H6', nom:'propène', niveau:2,
+    lourds:['C','C','C'], h:[2,1,3], squelette:[[0,1,2],[1,2]], mesomeres:1 },
+  { id:'C3H6_cyc', f:'C3H6', nom:'cyclopropane', niveau:2,
+    lourds:['C','C','C'], h:[2,2,2], squelette:[[0,1],[1,2],[2,0]], mesomeres:1,
+    note:"Isomère du propène : un cycle au lieu d'une double liaison." },
+  { id:'C3H6O', f:'C3H6O', nom:'propanone', niveau:2,
+    lourds:['C','C','C','O'], h:[3,0,3,0],
+    squelette:[[0,1],[1,2],[1,3,2]], mesomeres:1 },
+  { id:'CH2O2', f:'CH2O2', nom:'acide méthanoïque', niveau:2,
+    lourds:['C','O','O'], h:[1,0,1], squelette:[[0,1,2],[0,2]], mesomeres:1 },
+  { id:'C2H4O2', f:'C2H4O2', nom:'acide éthanoïque', niveau:2,
+    lourds:['C','C','O','O'], h:[3,0,0,1],
+    squelette:[[0,1],[1,2,2],[1,3]], mesomeres:1 },
+  { id:'HNO3', f:'HNO3', nom:'acide nitrique', niveau:2,
+    lourds:['N','O','O','O'], h:[0,0,0,1],
+    squelette:[[0,1,2],[0,2],[0,3]], mesomeres:2, cfAttendu:{0:1,2:-1},
+    note:"L'azote ne peut former quatre liaisons qu'en portant une charge formelle positive." },
+
+  { id:'NO3-', f:'NO3', nom:'ion nitrate', niveau:2, charge:-1,
+    lourds:['N','O','O','O'], h:[0,0,0,0],
+    squelette:[[0,1,2],[0,2],[0,3]], mesomeres:3, cfAttendu:{0:1,2:-1,3:-1},
+    note:"Trois formes mésomères équivalentes se déduisent l'une de l'autre." },
+  { id:'NO2-', f:'NO2', nom:'ion nitrite', niveau:2, charge:-1,
+    lourds:['N','O','O'], h:[0,0,0],
+    squelette:[[0,1,2],[0,2]], mesomeres:2, cfAttendu:{2:-1} },
+  { id:'CO3--', f:'CO3', nom:'ion carbonate', niveau:2, charge:-2,
+    lourds:['C','O','O','O'], h:[0,0,0,0],
+    squelette:[[0,1,2],[0,2],[0,3]], mesomeres:3, cfAttendu:{2:-1,3:-1},
+    note:"Trois formes mésomères équivalentes se déduisent l'une de l'autre." },
+  { id:'HCOO-', f:'HCOO', nom:'ion méthanoate', niveau:2, charge:-1,
+    lourds:['C','O','O'], h:[1,0,0],
+    squelette:[[0,1,2],[0,2]], mesomeres:2, cfAttendu:{2:-1} },
+  { id:'HCO3-', f:'HCO3', nom:'ion hydrogénocarbonate', niveau:2, charge:-1,
+    lourds:['C','O','O','O'], h:[0,0,0,1],
+    squelette:[[0,1,2],[0,2],[0,3]], mesomeres:2, cfAttendu:{2:-1} },
+  { id:'CH3O-', f:'CH3O', nom:'ion méthanolate', niveau:2, charge:-1,
+    lourds:['C','O'], h:[3,0], squelette:[[0,1]], mesomeres:1, cfAttendu:{1:-1} },
+
+  /* ====== Niveau 3 — chaînes longues, ramifiées ou cycliques =========== */
+
+  { id:'C4H10', f:'C4H10', nom:'butane', niveau:3,
+    lourds:['C','C','C','C'], h:[3,2,2,3],
+    squelette:[[0,1],[1,2],[2,3]], mesomeres:1 },
+  { id:'iC4H10', f:'C4H10', nom:'2-méthylpropane', niveau:3,
+    lourds:['C','C','C','C'], h:[3,1,3,3],
+    squelette:[[0,1],[1,2],[1,3]], mesomeres:1, note:"Isomère du butane." },
+  { id:'C5H12', f:'C5H12', nom:'pentane', niveau:3,
+    lourds:['C','C','C','C','C'], h:[3,2,2,2,3],
+    squelette:[[0,1],[1,2],[2,3],[3,4]], mesomeres:1 },
+  { id:'C5H12_2m', f:'C5H12', nom:'2-méthylbutane', niveau:3,
+    lourds:['C','C','C','C','C'], h:[3,1,2,3,3],
+    squelette:[[0,1],[1,2],[2,3],[1,4]], mesomeres:1 },
+  { id:'C5H12_22m', f:'C5H12', nom:'2,2-diméthylpropane', niveau:3,
+    lourds:['C','C','C','C','C'], h:[3,0,3,3,3],
+    squelette:[[0,1],[1,2],[1,3],[1,4]], mesomeres:1 },
+  { id:'C4H8_ene', f:'C4H8', nom:'but-2-ène', niveau:3,
+    lourds:['C','C','C','C'], h:[3,1,1,3],
+    squelette:[[0,1],[1,2,2],[2,3]], mesomeres:1 },
+  { id:'C4H8_cyc', f:'C4H8', nom:'cyclobutane', niveau:3,
+    lourds:['C','C','C','C'], h:[2,2,2,2],
+    squelette:[[0,1],[1,2],[2,3],[3,0]], mesomeres:1 },
+  { id:'C3H8O_1', f:'C3H8O', nom:'propan-1-ol', niveau:3,
+    lourds:['C','C','C','O'], h:[3,2,2,1],
+    squelette:[[0,1],[1,2],[2,3]], mesomeres:1 },
+  { id:'C3H8O_2', f:'C3H8O', nom:'propan-2-ol', niveau:3,
+    lourds:['C','C','C','O'], h:[3,1,3,1],
+    squelette:[[0,1],[1,2],[1,3]], mesomeres:1 },
+  { id:'C4H10O_2', f:'C4H10O', nom:'butan-2-ol', niveau:3,
+    lourds:['C','C','C','C','O'], h:[3,1,2,3,1],
+    squelette:[[0,1],[1,2],[2,3],[1,4]], mesomeres:1 },
+  { id:'C4H10O_22', f:'C4H10O', nom:'2-méthylpropan-2-ol', niveau:3,
+    lourds:['C','C','C','C','O'], h:[3,0,3,3,1],
+    squelette:[[0,1],[1,2],[1,3],[1,4]], mesomeres:1 },
+  { id:'C2H6O2', f:'C2H6O2', nom:'éthane-1,2-diol', niveau:3,
+    lourds:['C','C','O','O'], h:[2,2,1,1],
+    squelette:[[0,1],[0,2],[1,3]], mesomeres:1 },
+  { id:'C3H6O_al', f:'C3H6O', nom:'propanal', niveau:3,
+    lourds:['C','C','C','O'], h:[3,2,1,0],
+    squelette:[[0,1],[1,2],[2,3,2]], mesomeres:1 },
+  { id:'C4H8O_al', f:'C4H8O', nom:'butanal', niveau:3,
+    lourds:['C','C','C','C','O'], h:[3,2,2,1,0],
+    squelette:[[0,1],[1,2],[2,3],[3,4,2]], mesomeres:1 },
+  { id:'C4H8O', f:'C4H8O', nom:'butanone', niveau:3,
+    lourds:['C','C','C','C','O'], h:[3,0,2,3,0],
+    squelette:[[0,1],[1,2],[2,3],[1,4,2]], mesomeres:1 },
+  { id:'C5H10O', f:'C5H10O', nom:'pentan-3-one', niveau:3,
+    lourds:['C','C','C','C','C','O'], h:[3,2,0,2,3,0],
+    squelette:[[0,1],[1,2],[2,3],[3,4],[2,5,2]], mesomeres:1 },
+  { id:'C3H6O2', f:'C3H6O2', nom:'acide propanoïque', niveau:3,
+    lourds:['C','C','C','O','O'], h:[3,2,0,0,1],
+    squelette:[[0,1],[1,2],[2,3,2],[2,4]], mesomeres:1 },
+  { id:'C4H8O2', f:'C4H8O2', nom:'acide butanoïque', niveau:3,
+    lourds:['C','C','C','C','O','O'], h:[3,2,2,0,0,1],
+    squelette:[[0,1],[1,2],[2,3],[3,4,2],[3,5]], mesomeres:1 },
+  { id:'C4H8O2_2m', f:'C4H8O2', nom:'acide 2-méthylpropanoïque', niveau:3,
+    lourds:['C','C','C','C','O','O'], h:[3,1,3,0,0,1],
+    squelette:[[0,1],[1,2],[1,3],[3,4,2],[3,5]], mesomeres:1 },
+  { id:'C6H12', f:'C6H12', nom:'cyclohexane', niveau:3,
+    lourds:['C','C','C','C','C','C'], h:[2,2,2,2,2,2],
+    squelette:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]], mesomeres:1 },
+  { id:'C6H12O', f:'C6H12O', nom:'cyclohexanol', niveau:3,
+    lourds:['C','C','C','C','C','C','O'], h:[1,2,2,2,2,2,1],
+    squelette:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[0,6]], mesomeres:1 },
+  { id:'C6H10O', f:'C6H10O', nom:'cyclohexanone', niveau:3,
+    lourds:['C','C','C','C','C','C','O'], h:[0,2,2,2,2,2,0],
+    squelette:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[0,6,2]], mesomeres:1 },
+
+  { id:'CH3COO-', f:'CH3COO', nom:'ion éthanoate', niveau:3, charge:-1,
+    lourds:['C','C','O','O'], h:[3,0,0,0],
+    squelette:[[0,1],[1,2,2],[1,3]], mesomeres:2, cfAttendu:{3:-1},
+    note:"Les deux atomes d'oxygène sont équivalents : deux formes mésomères." },
+  { id:'C2H5COO-', f:'C2H5COO', nom:'ion propanoate', niveau:3, charge:-1,
+    lourds:['C','C','C','O','O'], h:[3,2,0,0,0],
+    squelette:[[0,1],[1,2],[2,3,2],[2,4]], mesomeres:2, cfAttendu:{4:-1} },
+  { id:'C2H5O-', f:'C2H5O', nom:'ion éthanolate', niveau:3, charge:-1,
+    lourds:['C','C','O'], h:[3,2,0],
+    squelette:[[0,1],[1,2]], mesomeres:1, cfAttendu:{2:-1} }
+];
+
+/* ------- Expansion : ajout des hydrogènes et des ordres de référence ----- */
+
+var MOLECULES = DEFINITIONS.map(function (d) {
+  var atomes = d.lourds.slice();
+  var liaisons = [], attendu = [];
+  (d.squelette || []).forEach(function (a) {
+    liaisons.push([a[0], a[1]]); attendu.push(a[2] || 1);
+  });
+  (d.h || []).forEach(function (n, i) {
+    for (var k = 0; k < n; k++) {
+      liaisons.push([i, atomes.length]); attendu.push(1); atomes.push('H');
+    }
+  });
+  var m = {};
+  Object.keys(d).forEach(function (c) { m[c] = d[c]; });
+  m.atomes = atomes;
+  m.liaisons = liaisons;
+  m.attendu = attendu;
+  m.charge = d.charge || 0;
+  m.ion = !!d.charge;
+  m.nbLourds = d.lourds.length;
+  return m;
+});
+
+/* -------------------------------------------------------------------------
+   Jeu « Nomenclature »
+   ------------------------------------------------------------------------- */
+
+var NOMENCLATURE = [
+  { f:'CH4', r:'méthane', famille:'alcane', rang:1 },
+  { f:'CH3-CH3', r:'éthane', famille:'alcane', rang:1 },
+  { f:'CH3-CH2-CH3', r:'propane', famille:'alcane', rang:1 },
+  { f:'CH3-CH2-CH2-CH3', r:'butane', famille:'alcane', rang:1 },
+  { f:'CH3-CH2-CH2-CH2-CH3', r:'pentane', famille:'alcane', rang:1 },
+  { f:'CH3-CH2-CH2-CH2-CH2-CH3', r:'hexane', famille:'alcane', rang:1 },
+  { f:'CH3-CH2-CH2-CH2-CH2-CH2-CH3', r:'heptane', famille:'alcane', rang:2 },
+
+  { f:'CH3-OH', r:'méthanol', famille:'alcool', rang:1 },
+  { f:'CH3-CH2-OH', r:'éthanol', famille:'alcool', rang:1 },
+  { f:'CH3-CH2-CH2-OH', r:'propan-1-ol', famille:'alcool', rang:2 },
+  { f:'CH3-CH(OH)-CH3', r:'propan-2-ol', famille:'alcool', rang:2,
+    usuels:[['isopropanol','propan-2-ol'],['alcool isopropylique','propan-2-ol']] },
+  { f:'CH3-CH2-CH2-CH2-OH', r:'butan-1-ol', famille:'alcool', rang:2 },
+  { f:'CH3-CH(OH)-CH2-CH3', r:'butan-2-ol', famille:'alcool', rang:2 },
+  { f:'CH3-CH2-CH2-CH2-CH2-OH', r:'pentan-1-ol', famille:'alcool', rang:2 },
+  { f:'CH3-CH(OH)-CH2-CH2-CH3', r:'pentan-2-ol', famille:'alcool', rang:3 },
+  { f:'CH3-CH2-CH(OH)-CH2-CH3', r:'pentan-3-ol', famille:'alcool', rang:3 },
+  { f:'CH3-CH2-CH2-CH2-CH2-CH2-OH', r:'hexan-1-ol', famille:'alcool', rang:3 },
+  { f:'CH3-CH2-CH2-CH(OH)-CH2-CH3', r:'hexan-3-ol', famille:'alcool', rang:3 },
+
+  { f:'CH3-CH(CH3)-CH3', r:'2-méthylpropane', famille:'alcane', rang:2,
+    variantes:['méthylpropane'] },
+  { f:'CH3-CH(CH3)-CH2-CH3', r:'2-méthylbutane', famille:'alcane', rang:2 },
+  { f:'CH3-CH2-CH(CH3)-CH3', r:'2-méthylbutane', famille:'alcane', rang:2,
+    indice:"Numérotez la chaîne principale en partant de l'extrémité qui donne le plus petit indice." },
+  { f:'CH3-C(CH3)2-CH3', r:'2,2-diméthylpropane', famille:'alcane', rang:3 },
+  { f:'CH3-CH2-CH(CH3)-CH2-CH3', r:'3-méthylpentane', famille:'alcane', rang:3 },
+  { f:'CH3-CH(CH3)-CH(CH3)-CH3', r:'2,3-diméthylbutane', famille:'alcane', rang:3 },
+  { f:'CH3-C(CH3)2-CH2-CH3', r:'2,2-diméthylbutane', famille:'alcane', rang:3 },
+  { f:'CH3-CH(CH3)-CH2-CH2-CH3', r:'2-méthylpentane', famille:'alcane', rang:3 },
+
+  { f:'HCHO', r:'méthanal', famille:'aldéhyde', rang:2,
+    usuels:[['formaldéhyde','méthanal'],['formol','méthanal']] },
+  { f:'CH3-CHO', r:'éthanal', famille:'aldéhyde', rang:2,
+    usuels:[['acétaldéhyde','éthanal']] },
+  { f:'CH3-CH2-CHO', r:'propanal', famille:'aldéhyde', rang:2 },
+  { f:'CH3-CH2-CH2-CHO', r:'butanal', famille:'aldéhyde', rang:3 },
+  { f:'CH3-CH2-CH2-CH2-CHO', r:'pentanal', famille:'aldéhyde', rang:3 },
+  { f:'CH3-CH(CH3)-CHO', r:'2-méthylpropanal', famille:'aldéhyde', rang:3 },
+  { f:'CH3-CH(CH3)-CH2-CHO', r:'3-méthylbutanal', famille:'aldéhyde', rang:3 },
+
+  { f:'CH3-CO-CH3', r:'propanone', famille:'cétone', rang:2,
+    variantes:['propan-2-one'], usuels:[['acétone','propanone']] },
+  { f:'CH3-CO-CH2-CH3', r:'butanone', famille:'cétone', rang:2,
+    variantes:['butan-2-one'] },
+  { f:'CH3-CO-CH2-CH2-CH3', r:'pentan-2-one', famille:'cétone', rang:3 },
+  { f:'CH3-CH2-CO-CH2-CH3', r:'pentan-3-one', famille:'cétone', rang:3 },
+  { f:'CH3-CO-CH2-CH2-CH2-CH3', r:'hexan-2-one', famille:'cétone', rang:3 },
+  { f:'CH3-CH2-CO-CH2-CH2-CH3', r:'hexan-3-one', famille:'cétone', rang:3 },
+  { f:'CH3-CO-CH2-CH(CH3)-CH3', r:'4-méthylpentan-2-one', famille:'cétone', rang:3 },
+
+  { f:'CH3-CH(CH3)-CH2-OH', r:'2-méthylpropan-1-ol', famille:'alcool', rang:3 },
+  { f:'CH3-C(CH3)(OH)-CH3', r:'2-méthylpropan-2-ol', famille:'alcool', rang:3 },
+  { f:'CH3-CH(CH3)-CH2-CH2-OH', r:'3-méthylbutan-1-ol', famille:'alcool', rang:3 },
+  { f:'CH3-CH2-C(CH3)(OH)-CH3', r:'2-méthylbutan-2-ol', famille:'alcool', rang:3 },
+
+  { f:'HCOOH', r:'acide méthanoïque', famille:'acide carboxylique', rang:2,
+    usuels:[['acide formique','acide méthanoïque']] },
+  { f:'CH3-COOH', r:'acide éthanoïque', famille:'acide carboxylique', rang:2,
+    usuels:[['acide acétique','acide éthanoïque']] },
+  { f:'CH3-CH2-COOH', r:'acide propanoïque', famille:'acide carboxylique', rang:2 },
+  { f:'CH3-CH2-CH2-COOH', r:'acide butanoïque', famille:'acide carboxylique', rang:3,
+    usuels:[['acide butyrique','acide butanoïque']] },
+  { f:'CH3-CH(CH3)-COOH', r:'acide 2-méthylpropanoïque', famille:'acide carboxylique', rang:3 },
+  { f:'CH3-CH2-CH2-CH2-COOH', r:'acide pentanoïque', famille:'acide carboxylique', rang:3 },
+  { f:'CH3-CH(CH3)-CH2-COOH', r:'acide 3-méthylbutanoïque', famille:'acide carboxylique', rang:3 }
+];
+
+/* ---- Niveau Terminale : esters, amines, amides, halogénoalcanes ---------
+   BO spécial n°8 du 25/07/2019 : « Familles fonctionnelles : esters, amines,
+   amides et halogénoalcane. Nomenclature des composés organiques. »
+   Chaînes linéaires ou ramifiées uniquement, sept carbones au maximum.       */
+
+var NOMENCLATURE_T = [
+  // --- esters
+  { f:'HCOO-CH3', r:'méthanoate de méthyle', famille:'ester', rang:1 },
+  { f:'CH3-COO-CH3', r:'éthanoate de méthyle', famille:'ester', rang:1,
+    usuels:[['acétate de méthyle','éthanoate de méthyle']] },
+  { f:'HCOO-CH2-CH3', r:"méthanoate d'éthyle", famille:'ester', rang:1 },
+  { f:'CH3-COO-CH2-CH3', r:"éthanoate d'éthyle", famille:'ester', rang:1,
+    usuels:[["acétate d'éthyle","éthanoate d'éthyle"]] },
+  { f:'CH3-CH2-COO-CH3', r:'propanoate de méthyle', famille:'ester', rang:2 },
+  { f:'HCOO-CH2-CH2-CH3', r:'méthanoate de propyle', famille:'ester', rang:2 },
+  { f:'CH3-COO-CH2-CH2-CH3', r:'éthanoate de propyle', famille:'ester', rang:2 },
+  { f:'CH3-CH2-COO-CH2-CH3', r:"propanoate d'éthyle", famille:'ester', rang:2 },
+  { f:'CH3-CH2-CH2-COO-CH3', r:'butanoate de méthyle', famille:'ester', rang:2,
+    indice:"La chaîne qui porte le carbone du groupe C=O donne la terminaison « -oate »." },
+  { f:'CH3-COO-CH2-CH2-CH2-CH3', r:'éthanoate de butyle', famille:'ester', rang:3 },
+  { f:'CH3-CH2-CH2-COO-CH2-CH3', r:"butanoate d'éthyle", famille:'ester', rang:3 },
+  { f:'CH3-CH2-COO-CH2-CH2-CH3', r:'propanoate de propyle', famille:'ester', rang:3 },
+  { f:'CH3-CH(CH3)-COO-CH3', r:'2-méthylpropanoate de méthyle', famille:'ester', rang:3 },
+  { f:'CH3-CH2-CH2-CH2-COO-CH3', r:'pentanoate de méthyle', famille:'ester', rang:3 },
+  { f:'CH3-COO-CH2-CH(CH3)-CH3', r:'éthanoate de 2-méthylpropyle', famille:'ester', rang:3 },
+
+  // --- amines
+  { f:'CH3-NH2', r:'méthanamine', famille:'amine', rang:1 },
+  { f:'CH3-CH2-NH2', r:'éthanamine', famille:'amine', rang:1 },
+  { f:'CH3-CH2-CH2-NH2', r:'propan-1-amine', famille:'amine', rang:1,
+    variantes:['1-aminopropane'] },
+  { f:'CH3-CH(NH2)-CH3', r:'propan-2-amine', famille:'amine', rang:2,
+    variantes:['2-aminopropane'] },
+  { f:'CH3-CH2-CH2-CH2-NH2', r:'butan-1-amine', famille:'amine', rang:2,
+    variantes:['1-aminobutane'] },
+  { f:'CH3-CH(NH2)-CH2-CH3', r:'butan-2-amine', famille:'amine', rang:2,
+    variantes:['2-aminobutane'] },
+  { f:'CH3-CH2-CH2-CH2-CH2-NH2', r:'pentan-1-amine', famille:'amine', rang:2 },
+  { f:'CH3-CH2-CH(NH2)-CH2-CH3', r:'pentan-3-amine', famille:'amine', rang:3,
+    variantes:['3-aminopentane'] },
+  { f:'CH3-CH(CH3)-CH2-NH2', r:'2-méthylpropan-1-amine', famille:'amine', rang:3 },
+  { f:'CH3-C(CH3)(NH2)-CH3', r:'2-méthylpropan-2-amine', famille:'amine', rang:3 },
+  { f:'CH3-NH-CH3', r:'N-méthylméthanamine', famille:'amine', rang:3,
+    indice:"Pour une amine secondaire, le groupe porté par l'azote est nommé en préfixe, précédé de la lettre N." },
+  { f:'CH3-CH2-NH-CH3', r:'N-méthyléthanamine', famille:'amine', rang:3,
+    indice:"La chaîne principale est la plus longue de celles portées par l'azote." },
+  { f:'CH3-CH2-NH-CH2-CH3', r:"N-éthyléthanamine", famille:'amine', rang:3 },
+  { f:'CH3-CH2-CH2-NH-CH3', r:'N-méthylpropan-1-amine', famille:'amine', rang:3 },
+  { f:'CH3-N(CH3)-CH3', r:'N,N-diméthylméthanamine', famille:'amine', rang:3 },
+
+  // --- amides
+  { f:'HCO-NH2', r:'méthanamide', famille:'amide', rang:1,
+    usuels:[['formamide','méthanamide']] },
+  { f:'CH3-CO-NH2', r:'éthanamide', famille:'amide', rang:1,
+    usuels:[['acétamide','éthanamide']] },
+  { f:'CH3-CH2-CO-NH2', r:'propanamide', famille:'amide', rang:1 },
+  { f:'CH3-CH2-CH2-CO-NH2', r:'butanamide', famille:'amide', rang:2 },
+  { f:'CH3-CH2-CH2-CH2-CO-NH2', r:'pentanamide', famille:'amide', rang:2 },
+  { f:'CH3-CH(CH3)-CO-NH2', r:'2-méthylpropanamide', famille:'amide', rang:3 },
+  { f:'CH3-CH(CH3)-CH2-CO-NH2', r:'3-méthylbutanamide', famille:'amide', rang:3 },
+  { f:'HCO-NH-CH3', r:'N-méthylméthanamide', famille:'amide', rang:3 },
+  { f:'CH3-CO-NH-CH3', r:'N-méthyléthanamide', famille:'amide', rang:3,
+    indice:"Le carbone du groupe C=O appartient à la chaîne principale ; le groupe porté par l'azote est un préfixe en N-." },
+  { f:'CH3-CH2-CO-NH-CH3', r:'N-méthylpropanamide', famille:'amide', rang:3 },
+  { f:'CH3-CO-N(CH3)2', r:'N,N-diméthyléthanamide', famille:'amide', rang:3 },
+
+  // --- halogénoalcanes
+  { f:'CH3-Cl', r:'chlorométhane', famille:'halogénoalcane', rang:1 },
+  { f:'CH3-CH2-Cl', r:'chloroéthane', famille:'halogénoalcane', rang:1 },
+  { f:'CH3-CH2-Br', r:'bromoéthane', famille:'halogénoalcane', rang:1 },
+  { f:'CH3-CH2-CH2-Cl', r:'1-chloropropane', famille:'halogénoalcane', rang:1 },
+  { f:'CH3-CHCl-CH3', r:'2-chloropropane', famille:'halogénoalcane', rang:2 },
+  { f:'CH3-CH2-CH2-I', r:'1-iodopropane', famille:'halogénoalcane', rang:2 },
+  { f:'CH3-CH2-CH2-CH2-Br', r:'1-bromobutane', famille:'halogénoalcane', rang:2 },
+  { f:'CH3-CHBr-CH2-CH3', r:'2-bromobutane', famille:'halogénoalcane', rang:2 },
+  { f:'CH2Cl2', r:'dichlorométhane', famille:'halogénoalcane', rang:2 },
+  { f:'CHCl3', r:'trichlorométhane', famille:'halogénoalcane', rang:2,
+    usuels:[['chloroforme','trichlorométhane']] },
+  { f:'CH3-CH2-CH2-CH2-CH2-Cl', r:'1-chloropentane', famille:'halogénoalcane', rang:3 },
+  { f:'CH3-CH2-CHF-CH3', r:'2-fluorobutane', famille:'halogénoalcane', rang:3 },
+  { f:'CH3-CCl2-CH3', r:'2,2-dichloropropane', famille:'halogénoalcane', rang:3 },
+  { f:'CH3-CHCl-CH2-Cl', r:'1,2-dichloropropane', famille:'halogénoalcane', rang:3 },
+  { f:'CH3-CH(CH3)-CH2-Cl', r:'1-chloro-2-méthylpropane', famille:'halogénoalcane', rang:3,
+    indice:"Les préfixes de substituants sont cités par ordre alphabétique : chloro avant méthyl." },
+  { f:'CH3-CBr(CH3)-CH3', r:'2-bromo-2-méthylpropane', famille:'halogénoalcane', rang:3 }
+];
+
+NOMENCLATURE.forEach(function (q) { q.niv = 'P'; });
+NOMENCLATURE_T.forEach(function (q) { q.niv = 'T'; });
+NOMENCLATURE = NOMENCLATURE.concat(NOMENCLATURE_T);
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { ELEMENTS: ELEMENTS, MOLECULES: MOLECULES, NOMENCLATURE: NOMENCLATURE };
+}
+
+</script>
+<script>
+/* =========================================================================
+   Molécules — moteur chimique et géométrie
+   Une structure construite par l'élève est représentée par :
+     liens = [ { a, b, ordre } ]        (a et b : indices d'atomes)
+     doublets = [ n0, n1, ... ]         (doublets non liants par atome)
+   ========================================================================= */
+
+var CHEM = (function (ELEMENTS) {
+  'use strict';
+
+  var L = 100;              // longueur de liaison de référence (tracé propre)
+  var R_H = 0.78 * L;
+  var R_DOUBLET = 0.48 * L;
+  var CADRE_L = 480;        // aire de travail du plan de construction
+  var CADRE_H = 560;
+
+  function el(sym) {
+    var e = ELEMENTS[sym];
+    if (!e) throw new Error('Élément inconnu : ' + sym);
+    return e;
+  }
+  function somme(t) { return t.reduce(function (a, x) { return a + x; }, 0); }
+
+  /* ------------------------------------------------------- formule brute */
+
+  var SUB = ['\u2080','\u2081','\u2082','\u2083','\u2084','\u2085','\u2086','\u2087','\u2088','\u2089'];
+  var SUP = ['\u2070','\u00B9','\u00B2','\u00B3','\u2074','\u2075','\u2076','\u2077','\u2078','\u2079'];
+  function chiffres(n, table) {
+    return String(n).split('').map(function (d) { return table[+d]; }).join('');
+  }
+
+  function compterFormule(f) {
+    var compte = {}, re = /([A-Z][a-z]?)(\d*)/g, m;
+    while ((m = re.exec(f)) !== null) {
+      if (!m[1]) break;
+      compte[m[1]] = (compte[m[1]] || 0) + (m[2] ? +m[2] : 1);
+    }
+    return compte;
+  }
+
+  function formuleBrute(mol) {
+    var texte = '', html = '';
+    mol.f.replace(/([A-Z][a-z]?)(\d*)/g, function (_, sym, n) {
+      texte += sym + (n ? chiffres(+n, SUB) : '');
+      html += sym + (n ? '<sub>' + n + '</sub>' : '');
+      return '';
+    });
+    var q = mol.charge || 0;
+    if (q !== 0) {
+      var abs = Math.abs(q);
+      texte += (abs > 1 ? chiffres(abs, SUP) : '') + (q > 0 ? '\u207A' : '\u207B');
+      html += '<sup>' + (abs > 1 ? abs : '') + (q > 0 ? '+' : '\u2212') + '</sup>';
+    }
+    return { texte: texte, html: html };
+  }
+
+  function electronsDeValence(mol) {
+    var total = 0;
+    mol.atomes.forEach(function (s) { total += el(s).valence; });
+    return total - (mol.charge || 0);
+  }
+
+  /* --------------------------------------------- outils sur les structures */
+
+  function liensDepuisPaires(paires, ordres) {
+    return paires.map(function (p, k) {
+      return { a: p[0], b: p[1], ordre: ordres ? ordres[k] : 1 };
+    });
+  }
+  function pairesDepuisLiens(liens) {
+    return liens.map(function (l) { return [l.a, l.b]; });
+  }
+
+  function adjacence(n, liens) {
+    var adj = [];
+    for (var i = 0; i < n; i++) adj.push([]);
+    liens.forEach(function (l) { adj[l.a].push(l.b); adj[l.b].push(l.a); });
+    return adj;
+  }
+
+  // Somme des ordres de liaison portés par chaque atome.
+  function degres(n, liens) {
+    var d = [];
+    for (var i = 0; i < n; i++) d.push(0);
+    liens.forEach(function (l) { d[l.a] += l.ordre; d[l.b] += l.ordre; });
+    return d;
+  }
+
+  function chargesFormelles(atomes, liens, doublets) {
+    var d = degres(atomes.length, liens);
+    return atomes.map(function (s, i) {
+      return el(s).valence - 2 * doublets[i] - d[i];
+    });
+  }
+
+  function composantes(n, liens) {
+    var adj = adjacence(n, liens), vu = [], groupes = [];
+    for (var i = 0; i < n; i++) {
+      if (vu[i]) continue;
+      var g = [], pile = [i]; vu[i] = true;
+      while (pile.length) {
+        var u = pile.pop(); g.push(u);
+        adj[u].forEach(function (v) { if (!vu[v]) { vu[v] = true; pile.push(v); } });
+      }
+      groupes.push(g);
+    }
+    return groupes;
+  }
+
+  /* ------------------------------- énumération des structures acceptables */
+
+  function repartirLacunes(atomes, deficit) {
+    var candidats = [];
+    atomes.forEach(function (s, i) {
+      var max = el(s).lacune / 2;
+      if (max > 0) candidats.push({ i: i, max: max });
+    });
+    var out = [];
+    (function rec(k, reste, courant) {
+      if (reste === 0) { out.push(courant.slice()); return; }
+      if (k >= candidats.length) return;
+      for (var v = 0; v <= Math.min(candidats[k].max, reste); v++) {
+        courant.push({ i: candidats[k].i, n: v });
+        rec(k + 1, reste - v, courant);
+        courant.pop();
+      }
+    })(0, deficit, []);
+    return out;
+  }
+
+  function doubletsPour(atomes, liens, eDispo) {
+    var d = degres(atomes.length, liens);
+    var besoin = [], besoinTotal = 0;
+    for (var i = 0; i < atomes.length; i++) {
+      var e = el(atomes[i]);
+      if (2 * d[i] > e.octet) return [];
+      var n = (e.octet - 2 * d[i]) / 2;
+      if (n !== Math.floor(n)) return [];
+      besoin.push(n); besoinTotal += n;
+    }
+    var reste = eDispo - 2 * somme(liens.map(function (l) { return l.ordre; }));
+    if (reste < 0 || reste % 2 !== 0) return [];
+    var dispo = reste / 2;
+    if (dispo === besoinTotal) return [besoin];
+    if (dispo > besoinTotal) return [];
+    return repartirLacunes(atomes, besoinTotal - dispo).map(function (rep) {
+      var t = besoin.slice();
+      rep.forEach(function (x) { t[x.i] -= x.n; });
+      return t;
+    }).filter(function (t) { return t.every(function (x) { return x >= 0; }); });
+  }
+
+  /**
+   * Énumère les structures de Lewis compatibles avec un squelette donné,
+   * puis retient celles dont les charges formelles sont minimales.
+   * @param base { atomes, paires:[[i,j]], charge }
+   */
+  function resoudreSquelette(atomes, paires, charge) {
+    var eDispo = 0;
+    atomes.forEach(function (s) { eDispo += el(s).valence; });
+    eDispo -= (charge || 0);
+
+    var variables = [];
+    paires.forEach(function (p, k) {
+      if (atomes[p[0]] !== 'H' && atomes[p[1]] !== 'H') variables.push(k);
+    });
+    if (variables.length > 12) return { eDispo: eDispo, optimales: [], tropGrand: true };
+
+    var toutes = [];
+    var ordres = paires.map(function () { return 1; });
+
+    (function rec(p) {
+      if (p === variables.length) {
+        var liens = liensDepuisPaires(paires, ordres);
+        doubletsPour(atomes, liens, eDispo).forEach(function (dbl) {
+          var cf = chargesFormelles(atomes, liens, dbl);
+          toutes.push({
+            ordres: ordres.slice(), doublets: dbl, cf: cf,
+            absCF: somme(cf.map(Math.abs)),
+            en: cf.reduce(function (a, x, i) { return a + x * el(atomes[i]).en; }, 0)
+          });
+        });
+        return;
+      }
+      var k = variables[p];
+      for (var o = 1; o <= 3; o++) { ordres[k] = o; rec(p + 1); }
+      ordres[k] = 1;
+    })(0);
+
+    if (!toutes.length) return { eDispo: eDispo, optimales: [], toutes: [] };
+    var minAbs = Math.min.apply(null, toutes.map(function (s) { return s.absCF; }));
+    var n1 = toutes.filter(function (s) { return s.absCF === minAbs; });
+    var minEn = Math.min.apply(null, n1.map(function (s) { return s.en; }));
+    return {
+      eDispo: eDispo, toutes: toutes,
+      optimales: n1.filter(function (s) { return s.en <= minEn + 1e-9; })
+    };
+  }
+
+  function resoudre(mol) {
+    return resoudreSquelette(mol.atomes, mol.liaisons, mol.charge);
+  }
+
+  /* ------------------------------------------- isomorphisme de squelettes */
+
+  /**
+   * Les deux jeux de liaisons portent-ils sur le même enchaînement d'atomes,
+   * à une renumérotation près ? Suppose que chaque hydrogène ne porte qu'une
+   * seule liaison (vérifié en amont par le diagnostic).
+   */
+  function isomorphe(atomes, pairesA, pairesB) {
+    if (pairesA.length !== pairesB.length) return false;
+    var n = atomes.length;
+    var lourds = [];
+    for (var i = 0; i < n; i++) if (atomes[i] !== 'H') lourds.push(i);
+
+    if (!lourds.length) {                       // cas H2
+      return pairesA.length === pairesB.length;
+    }
+
+    function profil(paires) {
+      var adj = {}, nH = {};
+      lourds.forEach(function (i) { adj[i] = {}; nH[i] = 0; });
+      var ok = true;
+      paires.forEach(function (p) {
+        var a = p[0], b = p[1];
+        var ha = atomes[a] === 'H', hb = atomes[b] === 'H';
+        if (ha && hb) { ok = false; return; }
+        if (ha) nH[b]++;
+        else if (hb) nH[a]++;
+        else { adj[a][b] = true; adj[b][a] = true; }
+      });
+      return ok ? { adj: adj, nH: nH } : null;
+    }
+
+    var A = profil(pairesA), B = profil(pairesB);
+    if (!A || !B) return false;
+
+    var m = lourds.length, pris = {}, corr = {};
+    function rec(k) {
+      if (k === m) return true;
+      var i = lourds[k];
+      for (var t = 0; t < m; t++) {
+        var j = lourds[t];
+        if (pris[j] || atomes[j] !== atomes[i] || A.nH[i] !== B.nH[j]) continue;
+        var ok = true;
+        for (var q = 0; q < k && ok; q++) {
+          var u = lourds[q];
+          if (!!A.adj[i][u] !== !!B.adj[j][corr[u]]) ok = false;
+        }
+        if (!ok) continue;
+        corr[i] = j; pris[j] = true;
+        if (rec(k + 1)) return true;
+        delete corr[i]; delete pris[j];
+      }
+      return false;
+    }
+    return rec(0);
+  }
+
+  /* ----------------------------------------------------------- diagnostic */
+
+  function etiquette(atomes, i) {
+    var sym = atomes[i];
+    var memes = atomes.filter(function (s) { return s === sym; }).length;
+    if (memes === 1) return sym;
+    var rang = 0;
+    for (var k = 0; k <= i; k++) if (atomes[k] === sym) rang++;
+    return sym + ' n\u00B0' + rang;
+  }
+
+  /**
+   * Analyse la construction de l'élève et renvoie un diagnostic ordonné.
+   */
+  function diagnostiquer(mol, liens, doublets) {
+    var atomes = mol.atomes, n = atomes.length;
+    var eDispo = electronsDeValence(mol);
+    var ePlaces = 2 * somme(liens.map(function (l) { return l.ordre; }))
+                + 2 * somme(doublets);
+    var problemes = [];
+    var cf = chargesFormelles(atomes, liens, doublets);
+
+    if (!liens.length) {
+      return { correct: false, ePlaces: ePlaces, eDispo: eDispo, cf: cf, isomere: false,
+        problemes: [{ type: 'vide', atomes: [],
+          texte: 'Reliez d\u2019abord les atomes entre eux : touchez un atome, puis un second.' }] };
+    }
+
+    // 1. une seule entité
+    var groupes = composantes(n, liens);
+    if (groupes.length > 1) {
+      groupes.sort(function (a, b) { return b.length - a.length; });
+      var detaches = groupes.slice(1).reduce(function (a, g) { return a.concat(g); }, []);
+      problemes.push({
+        type: 'connexite', atomes: detaches,
+        texte: 'Tous les atomes doivent appartenir à une seule entité : '
+             + detaches.length + (detaches.length > 1 ? ' atomes restent isolés' : ' atome reste isolé')
+             + ' du reste du schéma.'
+      });
+    }
+
+    // 2. valence de l'hydrogène
+    var d = degres(n, liens);
+    var hFaux = [];
+    for (var i = 0; i < n; i++) if (atomes[i] === 'H' && d[i] !== 1) hFaux.push(i);
+    if (hFaux.length) {
+      problemes.push({
+        type: 'hydrogene', atomes: hFaux,
+        texte: "Un atome d\u2019hydrogène ne forme qu\u2019une seule liaison simple ; "
+             + hFaux.length + (hFaux.length > 1 ? ' en portent' : ' en porte') + ' un autre nombre.'
+      });
+    }
+
+    // 3. décompte des électrons de valence
+    if (ePlaces !== eDispo) {
+      var ecart = eDispo - ePlaces;
+      problemes.push({
+        type: 'decompte', atomes: [],
+        texte: ecart > 0
+          ? 'Il reste ' + ecart + ' électron' + (ecart > 1 ? 's' : '') + ' de valence à placer.'
+          : 'Vous avez placé ' + (-ecart) + ' électron' + (-ecart > 1 ? 's' : '') + ' de trop.'
+      });
+    }
+
+    // 4. règle de l'octet (ou du duet)
+    var hyper = [], incomplets = [];
+    for (var k = 0; k < n; k++) {
+      var e = el(atomes[k]);
+      var entoures = 2 * d[k] + 2 * doublets[k];
+      if (entoures > e.octet) hyper.push(k);
+      else if (entoures < e.octet - e.lacune) incomplets.push(k);
+    }
+    if (hyper.length) {
+      problemes.push({
+        type: 'hypervalence', atomes: hyper,
+        texte: hyper.length === 1
+          ? 'L\u2019atome ' + etiquette(atomes, hyper[0]) + ' est entouré de plus de '
+            + el(atomes[hyper[0]]).octet + ' électrons.'
+          : hyper.length + ' atomes sont entourés de trop d\u2019électrons.'
+      });
+    }
+    if (incomplets.length) {
+      problemes.push({
+        type: 'octet', atomes: incomplets,
+        texte: incomplets.length === 1
+          ? 'L\u2019atome ' + etiquette(atomes, incomplets[0]) + ' n\u2019a pas son '
+            + (atomes[incomplets[0]] === 'H' ? 'duet' : 'octet') + ' complet.'
+          : incomplets.length + ' atomes n\u2019ont pas leur octet complet.'
+      });
+    }
+
+    // 5. enchaînement des atomes
+    var bonSquelette = false, isomereValide = false;
+    if (!problemes.length) {
+      bonSquelette = isomorphe(atomes, pairesDepuisLiens(liens), mol.liaisons);
+      if (!bonSquelette) {
+        isomereValide = true;   // octet et décompte respectés : structure valide, autre isomère
+        problemes.push({
+          type: 'squelette', atomes: [],
+          texte: 'Votre schéma respecte la règle de l\u2019octet, mais l\u2019enchaînement '
+               + 'des atomes ne correspond pas : vous avez construit un isomère.'
+        });
+      }
+    }
+
+    // 6. charges formelles minimales
+    if (!problemes.length) {
+      var sol = resoudreSquelette(atomes, pairesDepuisLiens(liens), mol.charge);
+      var ordres = liens.map(function (l) { return l.ordre; });
+      var corr = sol.optimales.some(function (s) {
+        return s.ordres.every(function (o, q) { return o === ordres[q]; })
+            && s.doublets.every(function (x, q) { return x === doublets[q]; });
+      });
+      if (!sol.tropGrand && !corr) {
+        problemes.push({
+          type: 'chargesFormelles',
+          atomes: cf.map(function (c, q) { return c !== 0 ? q : -1; })
+                    .filter(function (q) { return q >= 0; }),
+          texte: 'L\u2019octet est respecté partout, mais les charges formelles ne sont pas '
+               + 'les plus faibles possibles : une autre répartition des liaisons est préférable.'
+        });
+      }
+    }
+
+    return {
+      correct: problemes.length === 0,
+      problemes: problemes.slice(0, 3),
+      cf: cf, ePlaces: ePlaces, eDispo: eDispo, isomere: isomereValide
+    };
+  }
+
+  /* ------------------------------------------------- répartition angulaire */
+
+  function anglesLibres(occupees, k) {
+    if (k <= 0) return [];
+    if (!occupees.length) {
+      var bases = { 1: [0], 2: [150, 30], 3: [90, 210, 330], 4: [45, 135, 225, 315] };
+      if (bases[k]) return bases[k].map(function (x) { return x * Math.PI / 180; });
+      var out = [];
+      for (var i = 0; i < k; i++) out.push(i * 2 * Math.PI / k + Math.PI / 2);
+      return out;
+    }
+    var tri = occupees.slice().sort(function (a, b) { return a - b; });
+    var espaces = tri.map(function (a, i) {
+      var suiv = (i === tri.length - 1) ? tri[0] + 2 * Math.PI : tri[i + 1];
+      return { debut: a, taille: suiv - a, n: 0 };
+    });
+    for (var j = 0; j < k; j++) {
+      var best = 0;
+      for (var m = 1; m < espaces.length; m++) {
+        var ea = espaces[m].taille / (espaces[m].n + 1);
+        var eb = espaces[best].taille / (espaces[best].n + 1);
+        if (ea > eb + 1e-9 || (Math.abs(ea - eb) < 1e-9 && espaces[m].taille > espaces[best].taille + 1e-9)) best = m;
+      }
+      espaces[best].n++;
+    }
+    var res = [];
+    espaces.forEach(function (g) {
+      for (var q = 1; q <= g.n; q++) res.push(g.debut + g.taille * q / (g.n + 1));
+    });
+    return res;
+  }
+
+  function anglesDoublets(atomes, liens, pos, doublets, rayonDoublet) {
+    var adj = adjacence(atomes.length, liens);
+    return atomes.map(function (s, i) {
+      if (!doublets[i]) return [];
+      var occ = adj[i].map(function (v) {
+        return Math.atan2(pos[v].y - pos[i].y, pos[v].x - pos[i].x);
+      });
+      return anglesLibres(occ, doublets[i]);
+    });
+  }
+
+  /* ------------------------------------ plan de construction (atomes épars) */
+
+  /** Atomes lourds sur un cercle intérieur, hydrogènes sur une ellipse. */
+  function placementInitial(mol) {
+    var n = mol.atomes.length, pos = new Array(n);
+    var cx = CADRE_L / 2, cy = CADRE_H / 2;
+    var lourds = [], hs = [];
+    mol.atomes.forEach(function (s, i) { (s === 'H' ? hs : lourds).push(i); });
+
+    if (!lourds.length) {                       // dihydrogène
+      pos[0] = { x: cx - 80, y: cy };
+      pos[1] = { x: cx + 80, y: cy };
+      return pos;
+    }
+    if (lourds.length === 1) {
+      pos[lourds[0]] = { x: cx, y: cy };
+    } else {
+      var rL = Math.max(80, 88 / (2 * Math.sin(Math.PI / lourds.length)));
+      lourds.forEach(function (idx, i) {
+        var a = -Math.PI / 2 + 2 * Math.PI * i / lourds.length;
+        pos[idx] = { x: cx + rL * Math.cos(a), y: cy + rL * Math.sin(a) };
+      });
+    }
+    var a0 = CADRE_L / 2 - 42, b0 = CADRE_H / 2 - 42;
+    hs.forEach(function (idx, i) {
+      var a = -Math.PI / 2 + 2 * Math.PI * (i + 0.5) / Math.max(hs.length, 1);
+      pos[idx] = { x: cx + a0 * Math.cos(a), y: cy + b0 * Math.sin(a) };
+    });
+    return pos;
+  }
+
+  /* ------------------------- tracé de référence (schéma corrigé, soigné) --- */
+
+  function trouverCycle(lourds, adjL) {
+    var vus = {}, parent = {}, cycle = null;
+    lourds.forEach(function (dep) {
+      if (cycle || vus[dep]) return;
+      var pile = [dep]; vus[dep] = true; parent[dep] = -1;
+      while (pile.length && !cycle) {
+        var u = pile.pop();
+        for (var i = 0; i < adjL[u].length; i++) {
+          var v = adjL[u][i];
+          if (v === parent[u]) continue;
+          if (vus[v]) {
+            var cu = [u], x = u;
+            while (parent[x] !== -1) { x = parent[x]; cu.push(x); }
+            var cv = [v], y = v;
+            while (parent[y] !== -1) { y = parent[y]; cv.push(y); }
+            var setv = {}; cv.forEach(function (z, k) { setv[z] = k; });
+            for (var a = 0; a < cu.length; a++) {
+              if (setv[cu[a]] !== undefined) {
+                cycle = cu.slice(0, a + 1).concat(cv.slice(0, setv[cu[a]]).reverse());
+                break;
+              }
+            }
+            if (cycle && cycle.length < 3) cycle = null;
+            break;
+          }
+          vus[v] = true; parent[v] = u; pile.push(v);
+        }
+      }
+    });
+    return cycle;
+  }
+
+  function plusLongChemin(lourds, adjL) {
+    function bfs(dep) {
+      var dist = {}, prec = {};
+      dist[dep] = 0; var file = [dep], loin = dep;
+      while (file.length) {
+        var u = file.shift();
+        if (dist[u] > dist[loin]) loin = u;
+        adjL[u].forEach(function (v) {
+          if (dist[v] === undefined) { dist[v] = dist[u] + 1; prec[v] = u; file.push(v); }
+        });
+      }
+      return { loin: loin, prec: prec };
+    }
+    var a = bfs(lourds[0]).loin, r = bfs(a);
+    var chemin = [r.loin], x = r.loin;
+    while (r.prec[x] !== undefined) { x = r.prec[x]; chemin.push(x); }
+    return chemin;
+  }
+
+  function distSegment(p, a, b) {
+    var vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy;
+    if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+    var t = Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / l2));
+    return Math.hypot(p.x - (a.x + t * vx), p.y - (a.y + t * vy));
+  }
+
+  function raffinerHydrogenes(mol, pos, adj) {
+    var hs = [];
+    mol.atomes.forEach(function (s, i) { if (s === 'H') hs.push(i); });
+    if (!hs.length) return;
+    var gx = 0, gy = 0;
+    pos.forEach(function (p) { gx += p.x; gy += p.y; });
+    gx /= pos.length; gy /= pos.length;
+
+    function score(h, parent, q) {
+      var min = Infinity;
+      for (var j = 0; j < pos.length; j++) {
+        if (j === h || j === parent) continue;
+        min = Math.min(min, Math.hypot(q.x - pos[j].x, q.y - pos[j].y));
+      }
+      mol.liaisons.forEach(function (lz) {
+        if (lz[0] === h || lz[1] === h) return;
+        min = Math.min(min, 1.25 * distSegment(q, pos[lz[0]], pos[lz[1]]));
+      });
+      return min + 0.22 * (Math.hypot(q.x - gx, q.y - gy)
+                         - Math.hypot(pos[parent].x - gx, pos[parent].y - gy));
+    }
+
+    for (var iter = 0; iter < 6; iter++) {
+      var bouge = false;
+      for (var t = 0; t < hs.length; t++) {
+        var h = hs[t], parent = adj[h][0];
+        var courant = Math.atan2(pos[h].y - pos[parent].y, pos[h].x - pos[parent].x);
+        var best = null, bestS = -Infinity;
+        for (var k = 0; k < 96; k++) {
+          var a = 2 * Math.PI * k / 96;
+          var q = { x: pos[parent].x + R_H * Math.cos(a), y: pos[parent].y + R_H * Math.sin(a) };
+          var s = score(h, parent, q) + 0.6 * Math.cos(a - courant);
+          if (s > bestS + 1e-9) { bestS = s; best = q; }
+        }
+        if (Math.hypot(best.x - pos[h].x, best.y - pos[h].y) > 1e-6) bouge = true;
+        pos[h] = best;
+      }
+      if (!bouge) break;
+    }
+  }
+
+  function disposition(mol) {
+    var n = mol.atomes.length;
+    var liens = liensDepuisPaires(mol.liaisons);
+    var adj = adjacence(n, liens);
+    var pos = new Array(n).fill(null);
+    var lourds = [];
+    mol.atomes.forEach(function (s, i) { if (s !== 'H') lourds.push(i); });
+
+    if (!lourds.length) {
+      pos[0] = { x: -L / 2, y: 0 }; pos[1] = { x: L / 2, y: 0 };
+      return finaliser(pos);
+    }
+
+    var adjL = {};
+    lourds.forEach(function (i) {
+      adjL[i] = adj[i].filter(function (j) { return mol.atomes[j] !== 'H'; });
+    });
+
+    var cycle = lourds.length >= 3 ? trouverCycle(lourds, adjL) : null;
+    if (cycle) {
+      var k = cycle.length, R = L / (2 * Math.sin(Math.PI / k));
+      cycle.forEach(function (idx, i) {
+        var a = Math.PI / 2 + 2 * Math.PI * i / k;
+        pos[idx] = { x: R * Math.cos(a), y: R * Math.sin(a) };
+      });
+    } else {
+      var chemin = plusLongChemin(lourds, adjL);
+      var ang = mol.lin ? 0 : 30 * Math.PI / 180;
+      var x = 0, y = 0;
+      chemin.forEach(function (idx, i) {
+        pos[idx] = { x: x, y: y };
+        var a = (i % 2 === 0) ? ang : -ang;
+        x += L * Math.cos(a); y += L * Math.sin(a);
+      });
+    }
+
+    var change = true;
+    while (change) {
+      change = false;
+      lourds.forEach(function (u) {
+        if (!pos[u]) return;
+        var libres = adjL[u].filter(function (v) { return !pos[v]; });
+        if (!libres.length) return;
+        var occ = adj[u].filter(function (v) { return pos[v]; })
+          .map(function (v) { return Math.atan2(pos[v].y - pos[u].y, pos[v].x - pos[u].x); });
+        var angles = anglesLibres(occ, libres.length);
+        libres.forEach(function (v, i) {
+          pos[v] = { x: pos[u].x + L * Math.cos(angles[i]), y: pos[u].y + L * Math.sin(angles[i]) };
+        });
+        change = true;
+      });
+    }
+
+    lourds.forEach(function (u) {
+      var hs = adj[u].filter(function (v) { return mol.atomes[v] === 'H' && !pos[v]; });
+      if (!hs.length) return;
+      var occ = adj[u].filter(function (v) { return pos[v]; })
+        .map(function (v) { return Math.atan2(pos[v].y - pos[u].y, pos[v].x - pos[u].x); });
+      var angles = anglesLibres(occ, hs.length);
+      hs.forEach(function (v, i) {
+        pos[v] = { x: pos[u].x + R_H * Math.cos(angles[i]), y: pos[u].y + R_H * Math.sin(angles[i]) };
+      });
+    });
+
+    raffinerHydrogenes(mol, pos, adj);
+    return finaliser(pos);
+
+    function finaliser(p) {
+      p.forEach(function (q, i) { if (!q) throw new Error('Atome non placé : ' + mol.id + '/' + i); });
+      var out = p.map(function (q) { return { x: q.x, y: -q.y }; });
+      var cx = 0, cy = 0;
+      out.forEach(function (q) { cx += q.x; cy += q.y; });
+      cx /= out.length; cy /= out.length;
+      return out.map(function (q) { return { x: q.x - cx, y: q.y - cy }; });
+    }
+  }
+
+  return {
+    L: L, R_DOUBLET: R_DOUBLET, CADRE_L: CADRE_L, CADRE_H: CADRE_H,
+    elements: ELEMENTS,
+    formuleBrute: formuleBrute, compterFormule: compterFormule,
+    electronsDeValence: electronsDeValence,
+    liensDepuisPaires: liensDepuisPaires, pairesDepuisLiens: pairesDepuisLiens,
+    adjacence: adjacence, degres: degres, composantes: composantes,
+    chargesFormelles: chargesFormelles,
+    resoudre: resoudre, resoudreSquelette: resoudreSquelette,
+    isomorphe: isomorphe, diagnostiquer: diagnostiquer, etiquette: etiquette,
+    anglesLibres: anglesLibres, anglesDoublets: anglesDoublets,
+    placementInitial: placementInitial, disposition: disposition
+  };
+})(typeof ELEMENTS !== 'undefined' ? ELEMENTS : require('./data.js').ELEMENTS);
+
+if (typeof module !== 'undefined' && module.exports) module.exports = CHEM;
+
+</script>
+<script>
+/* =========================================================================
+   Molécules — tracé SVG
+   schema(atomes, liens, pos, doublets, opts)
+     liens : [ { a, b, ordre } ]
+     opts  : { interactif, atomeSel, liaisonSel, montrerCF, charge, cadre }
+   ========================================================================= */
+
+var RENDU = (function (CHEM) {
+  'use strict';
+
+  var RD = CHEM.R_DOUBLET;
+  var TRAIT = '#EDE6D8';
+  var DISQUE = '#1C2233';
+  var SELECTION = '#E8A93B';
+  var ALERTE = '#FF7A59';
+
+  function rayon(sym) {
+    if (sym === 'H') return 25;
+    return sym.length > 1 ? 33 : 29;
+  }
+
+  function schema(atomes, liens, pos, doublets, opts) {
+    opts = opts || {};
+    var sur = opts.surbrillance || [];
+    var s = [];
+
+    var vb;
+    if (opts.cadre) {
+      vb = '0 0 ' + opts.cadre.w + ' ' + opts.cadre.h;
+    } else {
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      pos.forEach(function (p, i) {
+        var m = doublets[i] ? RD + 18 : rayon(atomes[i]) + 8;
+        minX = Math.min(minX, p.x - m); maxX = Math.max(maxX, p.x + m);
+        minY = Math.min(minY, p.y - m); maxY = Math.max(maxY, p.y + m);
+      });
+      vb = (minX - 20).toFixed(1) + ' ' + (minY - 20).toFixed(1) + ' '
+         + (maxX - minX + 40).toFixed(1) + ' ' + (maxY - minY + 40).toFixed(1);
+    }
+
+    s.push('<svg class="schema" viewBox="' + vb + '" xmlns="http://www.w3.org/2000/svg" '
+      + 'preserveAspectRatio="xMidYMid meet">');
+
+    /* liaisons */
+    liens.forEach(function (l, k) {
+      var a = pos[l.a], b = pos[l.b];
+      var dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+      var ux = dx / d, uy = dy / d, px = -uy, py = ux;
+      var ra = rayon(atomes[l.a]) - 3, rb = rayon(atomes[l.b]) - 3;
+      var x1 = a.x + ux * ra, y1 = a.y + uy * ra;
+      var x2 = b.x - ux * rb, y2 = b.y - uy * rb;
+      var dec = l.ordre === 1 ? [0] : (l.ordre === 2 ? [-8, 8] : [-14, 0, 14]);
+      var couleur = (opts.liaisonSel === k) ? SELECTION : TRAIT;
+      dec.forEach(function (o) {
+        s.push('<line x1="' + (x1 + px * o).toFixed(1) + '" y1="' + (y1 + py * o).toFixed(1)
+          + '" x2="' + (x2 + px * o).toFixed(1) + '" y2="' + (y2 + py * o).toFixed(1)
+          + '" stroke="' + couleur + '" stroke-width="'
+          + (opts.liaisonSel === k ? 7.5 : 5.5) + '" stroke-linecap="round"/>');
+      });
+    });
+
+    /* doublets non liants */
+    var angles = CHEM.anglesDoublets(atomes, liens, pos, doublets);
+    angles.forEach(function (liste, i) {
+      liste.forEach(function (a) {
+        var cx = pos[i].x + RD * Math.cos(a), cy = pos[i].y + RD * Math.sin(a);
+        var px = -Math.sin(a) * 9, py = Math.cos(a) * 9;
+        var c = CHEM.elements[atomes[i]].couleur;
+        s.push('<circle cx="' + (cx + px).toFixed(1) + '" cy="' + (cy + py).toFixed(1)
+          + '" r="5" fill="' + c + '"/>');
+        s.push('<circle cx="' + (cx - px).toFixed(1) + '" cy="' + (cy - py).toFixed(1)
+          + '" r="5" fill="' + c + '"/>');
+      });
+    });
+
+    /* atomes */
+    atomes.forEach(function (sym, i) {
+      var r = rayon(sym), p = pos[i], c = CHEM.elements[sym].couleur;
+      var contour = c, epais = 2.5;
+      if (sur.indexOf(i) >= 0) { contour = ALERTE; epais = 5; }
+      if (opts.atomeSel === i) { contour = SELECTION; epais = 6; }
+      s.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r
+        + '" fill="' + DISQUE + '" stroke="' + contour + '" stroke-width="' + epais + '"/>');
+      s.push('<text x="' + p.x.toFixed(1) + '" y="' + p.y.toFixed(1)
+        + '" text-anchor="middle" dominant-baseline="central" font-size="'
+        + (sym.length > 1 ? 30 : 34) + '" font-weight="600" fill="' + c
+        + '" font-family="inherit">' + sym + '</text>');
+    });
+
+    /* charges formelles */
+    if (opts.montrerCF) {
+      var cf = CHEM.chargesFormelles(atomes, liens, doublets);
+      var adj = CHEM.adjacence(atomes.length, liens);
+      var pts = [];
+      angles.forEach(function (liste, i) {
+        liste.forEach(function (a) {
+          pts.push({ x: pos[i].x + RD * Math.cos(a), y: pos[i].y + RD * Math.sin(a) });
+        });
+      });
+      cf.forEach(function (q, i) {
+        if (!q) return;
+        var dist = rayon(atomes[i]) + 26, best = null, bestS = -Infinity;
+        for (var k = 0; k < 60; k++) {
+          var a = 2 * Math.PI * k / 60;
+          var c = { x: pos[i].x + dist * Math.cos(a), y: pos[i].y + dist * Math.sin(a) };
+          var sc = Infinity;
+          pos.forEach(function (p, j) {
+            if (j === i) return;
+            sc = Math.min(sc, Math.hypot(c.x - p.x, c.y - p.y) - rayon(atomes[j]));
+          });
+          pts.forEach(function (p) { sc = Math.min(sc, Math.hypot(c.x - p.x, c.y - p.y)); });
+          adj[i].forEach(function (v) {
+            var ang = Math.atan2(pos[v].y - pos[i].y, pos[v].x - pos[i].x);
+            sc = Math.min(sc, 40 * Math.abs(Math.atan2(Math.sin(a - ang), Math.cos(a - ang))));
+          });
+          if (sc > bestS) { bestS = sc; best = c; }
+        }
+        var txt = (q > 0 ? '+' : '\u2212') + (Math.abs(q) > 1 ? Math.abs(q) : '');
+        s.push('<circle cx="' + best.x.toFixed(1) + '" cy="' + best.y.toFixed(1)
+          + '" r="14" fill="' + (q > 0 ? '#D2593F' : '#5B7FD4') + '" stroke="' + DISQUE
+          + '" stroke-width="2.5"/>');
+        s.push('<text x="' + best.x.toFixed(1) + '" y="' + best.y.toFixed(1)
+          + '" text-anchor="middle" dominant-baseline="central" font-size="19" '
+          + 'font-weight="700" fill="#FFF6E8" font-family="inherit">' + txt + '</text>');
+      });
+    }
+
+    /* zones tactiles : liaisons d'abord, atomes par-dessus */
+    if (opts.interactif) {
+      liens.forEach(function (l, k) {
+        var a = pos[l.a], b = pos[l.b];
+        s.push('<line class="cible-liaison" data-liaison="' + k + '" x1="' + a.x.toFixed(1)
+          + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1)
+          + '" stroke="transparent" stroke-width="34"/>');
+      });
+      atomes.forEach(function (sym, i) {
+        s.push('<circle class="cible-atome" data-atome="' + i + '" cx="' + pos[i].x.toFixed(1)
+          + '" cy="' + pos[i].y.toFixed(1) + '" r="' + (rayon(sym) + 6) + '" fill="transparent"/>');
+      });
+    }
+
+    s.push('</svg>');
+    return s.join('');
+  }
+
+  return { schema: schema, rayon: rayon };
+})(typeof CHEM !== 'undefined' ? CHEM : require('./engine.js'));
+
+if (typeof module !== 'undefined' && module.exports) module.exports = RENDU;
+
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var SERIE_LEWIS = 6;
+  var SERIE_NOM = 10;
+
+  function montrer(id) {
+    Array.prototype.forEach.call(document.querySelectorAll('.ecran'), function (e) {
+      e.classList.toggle('actif', e.id === id);
+    });
+    var c = document.querySelector('#' + id + ' .contenu');
+    if (c) c.scrollTop = 0;
+  }
+
+  function melanger(t) {
+    var a = t.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var x = a[i]; a[i] = a[j]; a[j] = x;
+    }
+    return a;
+  }
+  function normaliser(s) {
+    return String(s).toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  }
+  function formuleDeveloppee(f) {
+    return f.replace(/([A-Za-z)])(\d+)/g, '$1<sub>$2</sub>')
+            .replace(/-/g, '<span class="lien">\u2013</span>');
+  }
+  function pluriel(n, s, p) { return n > 1 ? p : s; }
+
+  /* ==================================================================== */
+  /*  Jeu 1 — construction du schéma de Lewis                             */
+  /* ==================================================================== */
+
+  var lewis = null, glisse = null, rendu = null;
+
+  function demarrerLewis(niveau, avecIons) {
+    var pool = MOLECULES.filter(function (m) {
+      return m.niveau === niveau && (avecIons || !m.ion);
+    });
+    lewis = {
+      niveau: niveau, avecIons: avecIons,
+      serie: melanger(pool).slice(0, SERIE_LEWIS),
+      index: 0, reussites: 0, rates: []
+    };
+    chargerLewis();
+    montrer('ecran-lewis');
+  }
+
+  function chargerLewis() {
+    var m = lewis.serie[lewis.index];
+    lewis.mol = m;
+    lewis.pos = CHEM.placementInitial(m);
+    lewis.cadre = { w: CHEM.CADRE_L, h: CHEM.CADRE_H };
+    lewis.liens = [];
+    lewis.doublets = m.atomes.map(function () { return 0; });
+    lewis.sel = null;
+    lewis.pile = [];
+    lewis.termine = false;
+    lewis.correction = null;
+    lewis.surbrillance = [];
+    lewis.eDispo = CHEM.electronsDeValence(m);
+
+    $('#lewis-progression').textContent = 'Question ' + (lewis.index + 1)
+      + ' sur ' + lewis.serie.length;
+    $('#lewis-score').textContent = lewis.reussites + ' réussie'
+      + (lewis.reussites > 1 ? 's' : '');
+    $('#lewis-nom').textContent = m.nom;
+    $('#lewis-sous').innerHTML = CHEM.formuleBrute(m).html
+      + (m.charge ? ' \u00b7 ion de charge ' + (m.charge > 0 ? '+' : '\u2212')
+         + Math.abs(m.charge) : ' \u00b7 molécule neutre');
+    $('#lewis-retour').innerHTML = '';
+    actionsConstruction();
+    dessiner();
+  }
+
+  function actionsConstruction() {
+    $('#lewis-actions').innerHTML =
+      '<button class="secondaire etroit" id="lewis-annuler">Annuler</button>'
+      + '<button class="principal" id="lewis-verifier">Vérifier</button>';
+    $('#lewis-annuler').addEventListener('click', annuler);
+    $('#lewis-verifier').addEventListener('click', verifierLewis);
+  }
+
+  function memoriser() {
+    lewis.pile.push({
+      liens: lewis.liens.map(function (l) { return { a: l.a, b: l.b, ordre: l.ordre }; }),
+      doublets: lewis.doublets.slice()
+    });
+    if (lewis.pile.length > 40) lewis.pile.shift();
+  }
+
+  function annuler() {
+    if (lewis.termine || !lewis.pile.length) return;
+    var e = lewis.pile.pop();
+    lewis.liens = e.liens; lewis.doublets = e.doublets;
+    lewis.sel = null; lewis.surbrillance = [];
+    $('#lewis-retour').innerHTML = '';
+    dessiner();
+  }
+
+  function indexLiaison(i, j) {
+    for (var k = 0; k < lewis.liens.length; k++) {
+      var l = lewis.liens[k];
+      if ((l.a === i && l.b === j) || (l.a === j && l.b === i)) return k;
+    }
+    return -1;
+  }
+
+  function dessiner() {
+    var m = lewis.mol;
+    var vue = lewis.correction || { pos: lewis.pos, liens: lewis.liens, doublets: lewis.doublets };
+    $('#lewis-toile').innerHTML = RENDU.schema(m.atomes, vue.liens, vue.pos, vue.doublets, {
+      interactif: !lewis.termine,
+      cadre: lewis.correction ? null : lewis.cadre,
+      atomeSel: lewis.sel && lewis.sel.type === 'atome' ? lewis.sel.i : -1,
+      liaisonSel: lewis.sel && lewis.sel.type === 'liaison' ? lewis.sel.k : -1,
+      surbrillance: lewis.surbrillance,
+      montrerCF: lewis.termine
+    });
+    majPanneau();
+    majCompteur();
+  }
+
+  function planifierRendu() {
+    if (rendu) return;
+    rendu = requestAnimationFrame(function () { rendu = null; dessiner(); });
+  }
+
+  function majCompteur() {
+    var places = 2 * lewis.liens.reduce(function (a, l) { return a + l.ordre; }, 0)
+               + 2 * lewis.doublets.reduce(function (a, x) { return a + x; }, 0);
+    if (lewis.correction) {
+      places = 2 * lewis.correction.liens.reduce(function (a, l) { return a + l.ordre; }, 0)
+             + 2 * lewis.correction.doublets.reduce(function (a, x) { return a + x; }, 0);
+    }
+    $('#lewis-compteur-texte').textContent = places + ' / ' + lewis.eDispo + ' électrons placés';
+    var j = $('#lewis-jauge');
+    j.classList.toggle('trop', places > lewis.eDispo);
+    j.firstElementChild.style.width = Math.min(100, 100 * places / lewis.eDispo) + '%';
+  }
+
+  function majPanneau() {
+    var p = $('#lewis-panneau');
+    if (lewis.termine) { p.innerHTML = ''; return; }
+    var m = lewis.mol, sel = lewis.sel, h = [];
+
+    if (!sel) {
+      h.push('<p class="mode-emploi">Touchez un atome puis un second pour les relier. '
+        + 'Touchez une liaison pour en changer l\u2019ordre. Faites glisser un atome '
+        + 'pour le déplacer.</p>');
+      h.push('<div class="rangee-mini">'
+        + '<button class="mini" id="lewis-ranger">Ranger</button>'
+        + '<button class="mini" id="lewis-effacer">Effacer</button></div>');
+    } else if (sel.type === 'atome') {
+      var i = sel.i;
+      var d = CHEM.degres(m.atomes.length, lewis.liens);
+      var autour = 2 * d[i] + 2 * lewis.doublets[i];
+      h.push('<div class="panneau-titre">' + m.atomes[i] + ' \u2014 '
+        + CHEM.elements[m.atomes[i]].nom + '<span class="discret"> \u00b7 ' + autour
+        + ' électrons autour</span></div>');
+      h.push('<div class="rangee"><span>Doublets non liants</span>'
+        + '<span class="pas"><button class="mini" data-dbl="-1" aria-label="Retirer un doublet">\u2212</button>'
+        + '<b>' + lewis.doublets[i] + '</b>'
+        + '<button class="mini" data-dbl="1" aria-label="Ajouter un doublet">+</button></span></div>');
+      h.push('<p class="mode-emploi">Touchez un autre atome pour créer une liaison.</p>');
+    } else {
+      var l = lewis.liens[sel.k];
+      h.push('<div class="panneau-titre">Liaison ' + m.atomes[l.a] + '\u2013' + m.atomes[l.b] + '</div>');
+      h.push('<div class="segments">'
+        + [1, 2, 3].map(function (o) {
+            return '<button class="mini' + (l.ordre === o ? ' actif' : '') + '" data-ordre="' + o + '">'
+              + ['simple', 'double', 'triple'][o - 1] + '</button>';
+          }).join('')
+        + '<button class="mini danger" id="lewis-supprimer">Supprimer</button></div>');
+    }
+    p.innerHTML = h.join('');
+
+    if ($('#lewis-ranger')) $('#lewis-ranger').addEventListener('click', ranger);
+    if ($('#lewis-effacer')) $('#lewis-effacer').addEventListener('click', function () {
+      memoriser();
+      lewis.liens = []; lewis.doublets = m.atomes.map(function () { return 0; });
+      lewis.sel = null; lewis.surbrillance = [];
+      $('#lewis-retour').innerHTML = '';
+      dessiner();
+    });
+    Array.prototype.forEach.call(p.querySelectorAll('[data-dbl]'), function (b) {
+      b.addEventListener('click', function () {
+        var n = lewis.doublets[lewis.sel.i] + (+b.getAttribute('data-dbl'));
+        if (n < 0 || n > 4) return;
+        memoriser();
+        lewis.doublets[lewis.sel.i] = n;
+        $('#lewis-retour').innerHTML = '';
+        dessiner();
+      });
+    });
+    Array.prototype.forEach.call(p.querySelectorAll('[data-ordre]'), function (b) {
+      b.addEventListener('click', function () {
+        memoriser();
+        lewis.liens[lewis.sel.k].ordre = +b.getAttribute('data-ordre');
+        $('#lewis-retour').innerHTML = '';
+        dessiner();
+      });
+    });
+    if ($('#lewis-supprimer')) $('#lewis-supprimer').addEventListener('click', function () {
+      memoriser();
+      lewis.liens.splice(lewis.sel.k, 1);
+      lewis.sel = null;
+      $('#lewis-retour').innerHTML = '';
+      dessiner();
+    });
+  }
+
+  /** Réorganise le plan : d'après les liaisons déjà tracées si elles forment
+      une entité complète, sinon retour à la disposition de départ. */
+  function ranger() {
+    var m = lewis.mol;
+    var paires = CHEM.pairesDepuisLiens(lewis.liens);
+    var propre = paires.length > 0
+      && CHEM.composantes(m.atomes.length, lewis.liens).length === 1;
+    if (propre) {
+      var deg = CHEM.degres(m.atomes.length, lewis.liens);
+      propre = m.atomes.every(function (s, i) { return s !== 'H' || deg[i] === 1; });
+    }
+    var p = null;
+    if (propre) {
+      try {
+        p = CHEM.disposition({ id: m.id, atomes: m.atomes, liaisons: paires, lin: m.lin });
+      } catch (e) { p = null; }
+    }
+    if (!p) {
+      lewis.pos = CHEM.placementInitial(m);
+      lewis.cadre = { w: CHEM.CADRE_L, h: CHEM.CADRE_H };
+    } else {
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      p.forEach(function (q) {
+        minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x);
+        minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
+      });
+      var marge = 52;
+      var lg = maxX - minX, ht = maxY - minY;
+      var w = Math.max(CHEM.CADRE_L, lg + 2 * marge);
+      var hh = Math.max(CHEM.CADRE_H, ht + 2 * marge);
+      lewis.pos = p.map(function (q) {
+        return { x: q.x - minX + (w - lg) / 2, y: q.y - minY + (hh - ht) / 2 };
+      });
+      lewis.cadre = { w: w, h: hh };
+    }
+    lewis.sel = null;
+    dessiner();
+  }
+
+  /* ------------------------------------------------------- gestes tactiles */
+
+  function versSVG(svg, cx, cy) {
+    var pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    var p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  function contraindre(p, sym) {
+    var r = RENDU.rayon(sym) + 6;
+    return {
+      x: Math.max(r, Math.min(lewis.cadre.w - r, p.x)),
+      y: Math.max(r, Math.min(lewis.cadre.h - r, p.y))
+    };
+  }
+
+  function toucherAtome(i) {
+    var sel = lewis.sel;
+    if (sel && sel.type === 'atome' && sel.i !== i) {
+      var k = indexLiaison(sel.i, i);
+      if (k >= 0) {
+        lewis.sel = { type: 'liaison', k: k };
+      } else {
+        memoriser();
+        lewis.liens.push({ a: sel.i, b: i, ordre: 1 });
+        lewis.sel = { type: 'atome', i: lewis.mol.atomes[i] === 'H' ? sel.i : i };
+        $('#lewis-retour').innerHTML = '';
+      }
+    } else if (sel && sel.type === 'atome' && sel.i === i) {
+      lewis.sel = null;
+    } else {
+      lewis.sel = { type: 'atome', i: i };
+    }
+    lewis.surbrillance = [];
+    dessiner();
+  }
+
+  function installerGestes() {
+    var toile = $('#lewis-toile');
+    toile.addEventListener('pointerdown', function (e) {
+      if (lewis.termine) return;
+      var svg = toile.querySelector('svg');
+      if (!svg) return;
+      var t = e.target;
+      glisse = {
+        svg: svg, x0: e.clientX, y0: e.clientY, bouge: false,
+        atome: t.classList && t.classList.contains('cible-atome') ? +t.getAttribute('data-atome') : -1,
+        liaison: t.classList && t.classList.contains('cible-liaison') ? +t.getAttribute('data-liaison') : -1
+      };
+      if (glisse.atome >= 0) {
+        try { toile.setPointerCapture(e.pointerId); } catch (err) { /* ignoré */ }
+      }
+    });
+    toile.addEventListener('pointermove', function (e) {
+      if (!glisse || glisse.atome < 0 || lewis.termine) return;
+      if (!glisse.bouge && Math.hypot(e.clientX - glisse.x0, e.clientY - glisse.y0) < 9) return;
+      glisse.bouge = true;
+      lewis.pos[glisse.atome] = contraindre(
+        versSVG(glisse.svg, e.clientX, e.clientY), lewis.mol.atomes[glisse.atome]);
+      planifierRendu();
+    });
+    function relacher(e) {
+      if (!glisse || lewis.termine) { glisse = null; return; }
+      if (!glisse.bouge) {
+        if (glisse.atome >= 0) toucherAtome(glisse.atome);
+        else if (glisse.liaison >= 0) { lewis.sel = { type: 'liaison', k: glisse.liaison }; dessiner(); }
+        else if (lewis.sel) { lewis.sel = null; dessiner(); }
+      } else { dessiner(); }
+      glisse = null;
+    }
+    toile.addEventListener('pointerup', relacher);
+    toile.addEventListener('pointercancel', function () { glisse = null; });
+  }
+
+  /* ------------------------------------------------------------ correction */
+
+  function verifierLewis() {
+    var d = CHEM.diagnostiquer(lewis.mol, lewis.liens, lewis.doublets);
+    if (d.correct) {
+      lewis.termine = true;
+      lewis.reussites++;
+      lewis.sel = null;
+      $('#lewis-score').textContent = lewis.reussites + ' réussie'
+        + (lewis.reussites > 1 ? 's' : '');
+      retourLewis(true, d);
+    } else {
+      lewis.surbrillance = d.problemes.reduce(function (a, p) {
+        return a.concat(p.atomes || []);
+      }, []);
+      retourLewis(false, d);
+    }
+    dessiner();
+  }
+
+  function retourLewis(juste, d) {
+    var m = lewis.mol, h = [];
+    if (juste) {
+      var sol = CHEM.resoudre(m);
+      h.push('<div class="bilan-reponse juste"><h3>Schéma correct</h3>');
+      h.push('<p>' + descriptionStructure(lewis.liens, lewis.doublets) + '</p>');
+      if (sol.optimales.length > 1) {
+        h.push('<p class="discret">Cette entité admet ' + sol.optimales.length
+          + ' formes mésomères équivalentes ; la vôtre en fait partie.</p>');
+      }
+      if (m.note) h.push('<p class="discret">' + m.note + '</p>');
+      h.push('</div>');
+    } else {
+      h.push('<div class="bilan-reponse faux"><h3>Pas encore</h3><ul>');
+      d.problemes.forEach(function (p) { h.push('<li>' + p.texte + '</li>'); });
+      h.push('</ul></div>');
+    }
+    $('#lewis-retour').innerHTML = h.join('');
+
+    if (juste) {
+      $('#lewis-actions').innerHTML = '<button class="principal" id="lewis-suivant">'
+        + (lewis.index + 1 < lewis.serie.length ? 'Entité suivante' : 'Voir le bilan') + '</button>';
+      $('#lewis-suivant').addEventListener('click', suivantLewis);
+    } else {
+      $('#lewis-actions').innerHTML =
+        '<button class="secondaire etroit" id="lewis-reponse">Voir la réponse</button>'
+        + '<button class="principal" id="lewis-reprendre">Reprendre</button>';
+      $('#lewis-reponse').addEventListener('click', revelerLewis);
+      $('#lewis-reprendre').addEventListener('click', function () {
+        $('#lewis-retour').innerHTML = '';
+        lewis.surbrillance = [];
+        actionsConstruction();
+        dessiner();
+      });
+    }
+  }
+
+  function descriptionStructure(liens, doublets) {
+    var doubles = liens.filter(function (l) { return l.ordre === 2; }).length;
+    var triples = liens.filter(function (l) { return l.ordre === 3; }).length;
+    var dnl = doublets.reduce(function (a, x) { return a + x; }, 0);
+    var t = liens.length + ' ' + pluriel(liens.length, 'liaison', 'liaisons');
+    if (doubles) t += ', dont ' + doubles + ' ' + pluriel(doubles, 'double', 'doubles');
+    if (triples) t += (doubles ? ' et ' : ', dont ') + triples + ' '
+      + pluriel(triples, 'triple', 'triples');
+    return t + ' ; ' + dnl + ' ' + pluriel(dnl, 'doublet non liant', 'doublets non liants') + '.';
+  }
+
+  function revelerLewis() {
+    var m = lewis.mol, sol = CHEM.resoudre(m), s = sol.optimales[0];
+    lewis.correction = {
+      pos: CHEM.disposition(m),
+      liens: CHEM.liensDepuisPaires(m.liaisons, s.ordres),
+      doublets: s.doublets
+    };
+    lewis.termine = true;
+    lewis.sel = null;
+    lewis.surbrillance = [];
+    lewis.rates.push(m.nom);
+
+    var h = ['<div class="bilan-reponse"><h3>Réponse</h3>'];
+    h.push('<p><span class="nom-entite">' + m.nom + '</span> \u2014 '
+      + CHEM.formuleBrute(m).html + '</p>');
+    h.push('<p class="discret">' + descriptionStructure(lewis.correction.liens, s.doublets) + '</p>');
+    if (sol.optimales.length > 1) {
+      h.push('<p class="discret">Il existe ' + sol.optimales.length
+        + ' formes mésomères équivalentes ; l\u2019une d\u2019elles est représentée.</p>');
+    }
+    if (m.note) h.push('<p class="discret">' + m.note + '</p>');
+    h.push('</div>');
+    $('#lewis-retour').innerHTML = h.join('');
+    $('#lewis-actions').innerHTML = '<button class="principal" id="lewis-suivant">'
+      + (lewis.index + 1 < lewis.serie.length ? 'Entité suivante' : 'Voir le bilan') + '</button>';
+    $('#lewis-suivant').addEventListener('click', suivantLewis);
+    dessiner();
+  }
+
+  function suivantLewis() {
+    if (lewis.index + 1 < lewis.serie.length) { lewis.index++; chargerLewis(); }
+    else afficherBilan('Schéma de Lewis', lewis.reussites, lewis.serie.length, lewis.rates,
+      function () { demarrerLewis(lewis.niveau, lewis.avecIons); });
+  }
+
+  /* ==================================================================== */
+  /*  Jeu 2 — nomenclature                                                */
+  /* ==================================================================== */
+
+  var nom = null;
+
+  // Tire des questions en respectant des quotas par rang, puis complète
+  // dans le reste du vivier si un rang est trop peu fourni.
+  function tirer(pool, quotas, total) {
+    var parRang = { 1: [], 2: [], 3: [] };
+    pool.forEach(function (q) { parRang[q.rang].push(q); });
+    var choix = [];
+    [1, 2, 3].forEach(function (r) {
+      choix = choix.concat(melanger(parRang[r]).slice(0, quotas[r] || 0));
+    });
+    if (choix.length < total) {
+      var reste = melanger(pool).filter(function (q) { return choix.indexOf(q) < 0; });
+      choix = choix.concat(reste.slice(0, total - choix.length));
+    }
+    return choix.slice(0, total);
+  }
+
+  function demarrerNom(niveau) {
+    niveau = niveau || (nom && nom.niveau) || 'P';
+    var poolP = NOMENCLATURE.filter(function (q) { return q.niv === 'P'; });
+    var poolT = NOMENCLATURE.filter(function (q) { return q.niv === 'T'; });
+    var serie;
+    if (niveau === 'T') {
+      // panachage : 40 % de molécules du programme de première,
+      // 60 % des familles nouvelles au programme de terminale
+      var nP = Math.round(0.4 * SERIE_NOM), nT = SERIE_NOM - nP;
+      serie = tirer(poolP, { 1: 1, 2: 2, 3: 1 }, nP)
+        .concat(tirer(poolT, { 1: 2, 2: 2, 3: 2 }, nT));
+    } else {
+      serie = tirer(poolP, { 1: 3, 2: 4, 3: 3 }, SERIE_NOM);
+    }
+    serie.sort(function (a, b) { return a.rang - b.rang; });
+    nom = { niveau: niveau, serie: serie, index: 0, reussites: 0, rates: [] };
+    chargerNom();
+    montrer('ecran-nom');
+  }
+
+  function chargerNom() {
+    var q = nom.serie[nom.index];
+    nom.q = q; nom.indices = 0;
+    $('#nom-progression').textContent = 'Question ' + (nom.index + 1) + ' sur ' + nom.serie.length;
+    $('#nom-score').textContent = nom.reussites + ' réussie' + (nom.reussites > 1 ? 's' : '');
+    $('#nom-formule').innerHTML = formuleDeveloppee(q.f);
+    $('#nom-saisie').value = '';
+    $('#nom-saisie').disabled = false;
+    $('#nom-retour').innerHTML = '';
+    actionsNom();
+  }
+
+  function actionsNom() {
+    $('#nom-actions').innerHTML =
+      '<button class="secondaire etroit" id="nom-indice">Indice</button>'
+      + '<button class="principal" id="nom-verifier">Vérifier</button>';
+    $('#nom-indice').addEventListener('click', indiceNom);
+    $('#nom-verifier').addEventListener('click', verifierNom);
+  }
+
+  function indiceNom() {
+    var q = nom.q; nom.indices++;
+    var t;
+    if (nom.indices === 1) {
+      t = 'Cette molécule appartient à la famille des '
+        + (q.famille === 'acide carboxylique' ? 'acides carboxyliques' : q.famille + 's') + '.';
+    } else if (nom.indices === 2) {
+      var dev = q.f;
+      for (var g = 0; g < 6 && /\([^()]*\)\d/.test(dev); g++) {
+        dev = dev.replace(/\(([^()]*)\)(\d+)/, function (_, c, k) {
+          var r = ''; for (var z = 0; z < +k; z++) r += c; return r;
+        });
+      }
+      t = 'Elle compte ' + (dev.match(/C/g) || []).length + ' atomes de carbone au total.';
+    } else {
+      t = q.indice || 'Repérez la chaîne carbonée la plus longue, puis numérotez-la de façon '
+        + 'à obtenir le plus petit indice pour le groupe caractéristique.';
+    }
+    $('#nom-retour').innerHTML = '<div class="bilan-reponse"><h3>Indice</h3><p>' + t + '</p></div>';
+  }
+
+  function verifierNom() {
+    var q = nom.q, saisie = $('#nom-saisie').value.trim();
+    if (!saisie) { $('#nom-saisie').focus(); return; }
+    var n = normaliser(saisie);
+    var acceptes = [q.r].concat(q.variantes || []).map(normaliser);
+    var usuel = (q.usuels || []).filter(function (u) { return normaliser(u[0]) === n; })[0];
+
+    if (acceptes.indexOf(n) >= 0) {
+      terminerNom(true, '<h3>Bonne réponse</h3><p><span class="nom-entite">' + q.r + '</span></p>');
+    } else if (usuel) {
+      terminerNom(true, '<h3>Bonne réponse</h3><p>Vous avez donné le nom d\u2019usage. '
+        + 'Le nom systématique est <span class="nom-entite">' + usuel[1] + '</span>.</p>');
+    } else {
+      $('#nom-retour').innerHTML = '<div class="bilan-reponse faux"><h3>Ce n\u2019est pas le '
+        + 'bon nom</h3><p>Vérifiez la longueur de la chaîne principale, la position du groupe '
+        + 'caractéristique et la terminaison.</p></div>';
+      $('#nom-actions').innerHTML =
+        '<button class="secondaire etroit" id="nom-reponse">Voir la réponse</button>'
+        + '<button class="principal" id="nom-reessayer">Réessayer</button>';
+      $('#nom-reponse').addEventListener('click', function () {
+        nom.rates.push(q.r);
+        terminerNom(false, '<h3>Réponse</h3><p><span class="nom-entite">' + q.r + '</span></p>');
+      });
+      $('#nom-reessayer').addEventListener('click', function () {
+        $('#nom-retour').innerHTML = '';
+        actionsNom();
+        $('#nom-saisie').focus();
+      });
+    }
+  }
+
+  function terminerNom(juste, html) {
+    if (juste) nom.reussites++;
+    $('#nom-saisie').disabled = true;
+    $('#nom-retour').innerHTML = '<div class="bilan-reponse ' + (juste ? 'juste' : '') + '">'
+      + html + '</div>';
+    $('#nom-score').textContent = nom.reussites + ' réussie' + (nom.reussites > 1 ? 's' : '');
+    $('#nom-actions').innerHTML = '<button class="principal" id="nom-suivant">'
+      + (nom.index + 1 < nom.serie.length ? 'Molécule suivante' : 'Voir le bilan') + '</button>';
+    $('#nom-suivant').addEventListener('click', function () {
+      if (nom.index + 1 < nom.serie.length) { nom.index++; chargerNom(); }
+      else afficherBilan('Nomenclature \u2014 ' + (nom.niveau === 'T' ? 'terminale' : 'première'),
+        nom.reussites, nom.serie.length, nom.rates,
+        function () { demarrerNom(nom.niveau); });
+    });
+  }
+
+  /* ==================================================================== */
+
+  var rejouer = null;
+
+  function afficherBilan(titre, reussites, total, rates, relance) {
+    rejouer = relance;
+    $('#bilan-titre').textContent = titre;
+    $('#bilan-score').innerHTML = reussites + ' <span>sur ' + total + '</span>';
+    var msg;
+    if (reussites === total) msg = 'Série parfaite.';
+    else if (reussites >= total * 0.7) msg = 'Bon travail, quelques points à revoir.';
+    else if (reussites >= total / 2) msg = 'La méthode est là, il faut la consolider.';
+    else msg = 'Reprenez la méthode pas à pas, puis relancez une série.';
+    $('#bilan-message').textContent = msg;
+    $('#bilan-recap').innerHTML = rates.length
+      ? '<div class="recap"><b>À revoir</b><ul><li>' + rates.join('</li><li>') + '</li></ul></div>'
+      : '';
+    montrer('ecran-bilan');
+  }
+
+  function init() {
+    $('#ecran-titre').addEventListener('click', function () { montrer('ecran-menu'); });
+    $('#choix-lewis').addEventListener('click', function () { montrer('ecran-reglages'); });
+    $('#choix-nom').addEventListener('click', function () { montrer('ecran-reglages-nom'); });
+    $('#lancer-nom').addEventListener('click', function () {
+      demarrerNom(document.querySelector('input[name="niveauNom"]:checked').value);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.option'), function (o) {
+      o.addEventListener('click', function () {
+        var input = o.querySelector('input');
+        input.checked = true;
+        Array.prototype.forEach.call(document.getElementsByName(input.name), function (autre) {
+          autre.closest('.option').classList.toggle('choisie', autre.checked);
+        });
+      });
+    });
+
+    $('#lancer-lewis').addEventListener('click', function () {
+      demarrerLewis(+document.querySelector('input[name="niveau"]:checked').value,
+        document.querySelector('input[name="mode"]:checked').value === 'ions');
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-retour]'), function (b) {
+      b.addEventListener('click', function () { montrer(b.getAttribute('data-retour')); });
+    });
+
+    $('#bilan-rejouer').addEventListener('click', function () { if (rejouer) rejouer(); });
+    $('#nom-saisie').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && $('#nom-verifier')) { e.preventDefault(); verifierNom(); }
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.option input'), function (i) {
+      i.closest('.option').classList.toggle('choisie', i.checked);
+    });
+
+    installerGestes();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+</script>
+<script>
+/* Mise en cache hors connexion. Sans cela, l'application installée sur
+   l'écran d'accueil exige le réseau à chaque lancement. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+</script>
+</body>
+</html>
